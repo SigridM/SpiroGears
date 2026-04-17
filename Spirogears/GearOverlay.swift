@@ -36,7 +36,7 @@ struct GearOverlayView: View {
         // use innerRadius + ringBandWidth as the visible outer boundary.
         let displayOuterR = CGFloat(ring.innerRadius) + ringBandWidth
         let innerR = CGFloat(ring.innerRadius)
-        let depth  = CGFloat(ring.notchSize / .pi)
+        let depth  = CGFloat(ring.notchSize * 2 / .pi)
         let count  = ring.innerNotchCircumference
 
         context.drawLayer { ctx in
@@ -75,7 +75,7 @@ struct GearOverlayView: View {
                            y: center.y + dist * CGFloat(sin(rad)))
 
         let outerR = CGFloat(wheel.outerRadius)
-        let depth  = CGFloat(wheel.notchSize / .pi)
+        let depth  = CGFloat(wheel.notchSize * 2 / .pi)
 
         let spinDeg = angle * (1.0 - ratio) + originDeg
         let spinRad = (spinDeg - 90) * .pi / 180
@@ -108,7 +108,7 @@ struct GearOverlayView: View {
 
         // Mirror SpiroCircle.penRadius: hole 1 just inside the tooth root, hole maxHole near center.
         let outerR = CGFloat(wheel.outerRadius)
-        let firstR = outerR - CGFloat(wheel.notchSize / .pi)
+        let firstR = outerR - CGFloat(wheel.notchSize * 2 / .pi)
         let stepR  = firstR / CGFloat(maxHole)
 
         for h in 1...maxHole {
@@ -165,7 +165,7 @@ struct GearOverlayView: View {
                   notchCount: notchCount, startAngle: -.pi / 2, clockwise: false)
     }
 
-    /// General gear-tooth path. Alternates arcs at rootRadius (gaps) with arcs at tipRadius (teeth).
+    /// General gear-tooth path. Alternates arcs at rootRadius (gaps) with triangular teeth.
     private func toothPath(center: CGPoint, rootRadius: CGFloat, tipRadius: CGFloat,
                             notchCount: Int, startAngle: Double, clockwise: Bool) -> Path {
         var path    = Path()
@@ -183,10 +183,9 @@ struct GearOverlayView: View {
 
             path.addArc(center: center, radius: rootRadius,
                         startAngle: .radians(base),       endAngle: .radians(toothStart), clockwise: clockwise)
-            path.addLine(to: polar(center, tipRadius,  toothStart))
-            path.addArc(center: center, radius: tipRadius,
-                        startAngle: .radians(toothStart), endAngle: .radians(toothEnd),   clockwise: clockwise)
-            path.addLine(to: polar(center, rootRadius, toothEnd))
+            let toothMid = (toothStart + toothEnd) / 2
+            path.addLine(to: polar(center, tipRadius,  toothMid))   // rising flank → peak
+            path.addLine(to: polar(center, rootRadius, toothEnd))   // falling flank
             path.addArc(center: center, radius: rootRadius,
                         startAngle: .radians(toothEnd),   endAngle: .radians(nextBase),   clockwise: clockwise)
         }
