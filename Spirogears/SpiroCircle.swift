@@ -16,7 +16,15 @@ class SpiroCircle: SpiroGuide {
     var holeDistance: Double { Self.defaultHoleDistance * notchSize }
     var originalAngle: Double { angleIncrement * Double(startingNotch) }
     var holeNumber: Int { storedHoleNumber + Self.invisibleHolesToEdge }
-    var penRadius: Double { outerRadius - Double(holeNumber) * holeDistance }
+
+    // Pen radius: hole 1 sits just inside the tooth root; hole maxHole sits near center.
+    // Matches the visual hole positions drawn by GearOverlayView.
+    var penRadius: Double {
+        let maxH   = max(1, outerNotchCircumference / 2 - SpiroCircle.invisibleHolesToEdge)
+        let firstR = outerRadius - notchSize / .pi
+        let stepR  = firstR / Double(maxH)
+        return firstR - Double(storedHoleNumber - 1) * stepR
+    }
 
     // Override points for SpiroRing
     var notchCircumference: Int { outerNotchCircumference }

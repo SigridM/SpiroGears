@@ -60,18 +60,26 @@ struct GearOverlayView: View {
     private func drawWheel(_ wheel: SpiroWheel, around ring: SpiroRing,
                             center: CGPoint, angle: Double,
                             context: inout GraphicsContext) {
-        let dist  = CGFloat(ring.centerToCenterRadius(penGuide: wheel))
-        let rad   = (angle - 90) * .pi / 180
-        let wc    = CGPoint(x: center.x + dist * CGFloat(cos(rad)),
-                            y: center.y + dist * CGFloat(sin(rad)))
+        // The drawing formula (SpiroLayer.path) at step i gives:
+        //   thetaDeg (wheel center) = ring.angleIncrement × i + originalAngle − 90
+        //   alphaDeg (hole dir)     = −wheel.angleIncrement × i + thetaDeg
+        //                           = angle × (1 − ringInner/wheelOuter) + originalAngle − 90
+        // where angle = ring.angleIncrement × i.  Both use originalAngle as a fixed offset.
+        let originDeg = ring.originalAngle                          // startingNotch offset in degrees
+        let count     = wheel.outerNotchCircumference
+        let ratio     = Double(ring.innerNotchCircumference) / Double(count)
+
+        let dist = CGFloat(ring.centerToCenterRadius(penGuide: wheel))
+        let rad  = (angle + originDeg - 90) * .pi / 180
+        let wc   = CGPoint(x: center.x + dist * CGFloat(cos(rad)),
+                           y: center.y + dist * CGFloat(sin(rad)))
 
         let outerR = CGFloat(wheel.outerRadius)
         let depth  = CGFloat(wheel.notchSize / .pi)
-        let count  = wheel.outerNotchCircumference
 
-        // Rolling constraint: wheel counter-rotates as its center moves around the ring
-        let spinDeg  = -angle * Double(ring.innerNotchCircumference) / Double(count)
-        let spinRad  = (spinDeg - 90) * .pi / 180
+        let spinDeg = angle * (1.0 - ratio) + originDeg
+        let spinRad = (spinDeg - 90) * .pi / 180
+                      - Double(wheel.storedHoleNumber - 1) * holeAngularStep
 
         let path = toothPath(center: wc, rootRadius: outerR, tipRadius: outerR + depth,
                              notchCount: count, startAngle: spinRad, clockwise: false)
@@ -98,14 +106,10 @@ struct GearOverlayView: View {
         // 24→5, 36→11, 63→24, 64→25, 80→33
         let maxHole = max(1, wheel.outerNotchCircumference / 2 - SpiroCircle.invisibleHolesToEdge)
 
-        // Hole 1 sits just inside the tooth tips; the last hole sits near the center.
-        // invisibleHolesToEdge is a drawing-math concept (not visual layout), so we
-        // position holes purely from the tooth root inward.
-        let outerR  = CGFloat(wheel.outerRadius)
-        let toothD  = CGFloat(wheel.notchSize / .pi)
-        let firstR  = outerR - toothD - holeR          // just inside the teeth
-        let lastR   = holeR * 2                         // near center, still visible
-        let stepR   = maxHole > 1 ? (firstR - lastR) / CGFloat(maxHole - 1) : 0
+        // Mirror SpiroCircle.penRadius: hole 1 just inside the tooth root, hole maxHole near center.
+        let outerR = CGFloat(wheel.outerRadius)
+        let firstR = outerR - CGFloat(wheel.notchSize / .pi)
+        let stepR  = firstR / CGFloat(maxHole)
 
         for h in 1...maxHole {
             let r = firstR - CGFloat(h - 1) * stepR
