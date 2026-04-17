@@ -69,9 +69,8 @@ class SpiroCanvas: ObservableObject {
 
 struct SpiroCanvasView: View {
     @ObservedObject var canvas: SpiroCanvas
-
-    @State private var scale: CGFloat = 1.0
-    @State private var lastScale: CGFloat = 1.0
+    @Binding var scale: CGFloat
+    @Binding var lastScale: CGFloat
 
     var body: some View {
         Color.white

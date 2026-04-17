@@ -29,3 +29,14 @@ struct SpiroDialogData {
         SpiroLayer(penColor: UIColor(color), penGuide: makeWheel(), stationaryGuide: makeRing())
     }
 }
+
+extension SpiroDialogData {
+    init(from layer: SpiroLayer) {
+        outerRingNotches = layer.stationaryGuide.outerNotchCircumference
+        innerRingNotches = layer.stationaryGuide.innerNotchCircumference
+        wheelNotches     = layer.penGuide.outerNotchCircumference
+        holeNumber       = layer.penGuide.storedHoleNumber
+        startingNotch    = layer.stationaryGuide.startingNotch
+        color            = Color(uiColor: layer.penColor)
+    }
+}

@@ -3,9 +3,7 @@ import UIKit
 class SpiroDrawing {
     var layers: [SpiroLayer] = []
 
-    private static var _savedDrawings: [String: SpiroDrawing] = {
-        ["Triangle": SpiroDrawing.example5()]
-    }()
+    private static var _savedDrawings: [String: SpiroDrawing] = [:]
 
     func addLayer(_ layer: SpiroLayer) {
         layers.append(layer)
@@ -27,6 +25,9 @@ class SpiroDrawing {
     }
 
     // MARK: - Saved drawings
+
+    // Names reserved for built-in presets; cannot be overwritten by the user.
+    static let presetNames: Set<String> = ["Circle", "Star", "Triangle"]
 
     static func save(_ drawing: SpiroDrawing, name: String) {
         _savedDrawings[name] = drawing

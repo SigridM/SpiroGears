@@ -15,16 +15,35 @@ struct ContentView: View {
     @State private var currentDrawing: SpiroDrawing?
     @State private var currentDrawingName: String = ""
     @State private var undoneLayers: [SpiroLayer] = []
+    @State private var isModified = false
+
+    // Temporary: will be replaced by a user preference
+    @State private var showGears = true
+
+    // Zoom state lifted from SpiroCanvasView so GearOverlayView can share the same scale
+    @State private var canvasScale: CGFloat = 1.0
+    @State private var canvasLastScale: CGFloat = 1.0
+
     @State private var showingDrawingMenu = false
     @State private var showingConfig = false
     @State private var showingSaveAlert = false
+    @State private var showingSaveBeforeAction = false
+    @State private var showingPresetNameError = false
+
     @State private var saveNameInput = ""
     @State private var savedDrawingNames: [String] = []
+    @State private var pendingAction: DrawingMenuView.Action? = nil
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
-            SpiroCanvasView(canvas: canvas)
+            SpiroCanvasView(canvas: canvas, scale: $canvasScale, lastScale: $canvasLastScale)
                 .ignoresSafeArea()
+
+            if showGears, let layer = currentDrawing?.layers.last {
+                GearOverlayView(layer: layer)
+                    .scaleEffect(canvasScale)
+                    .ignoresSafeArea()
+            }
 
             Button("Drawing") { showingDrawingMenu = true }
                 .padding(.horizontal, 16)
@@ -35,7 +54,7 @@ struct ContentView: View {
         }
         .sheet(isPresented: $showingDrawingMenu) {
             NavigationStack {
-                DrawingMenuView(savedDrawingNames: savedDrawingNames) { action in
+                DrawingMenuView(currentDrawing: currentDrawing, savedDrawingNames: savedDrawingNames) { action in
                     handleMenuAction(action)
                 }
             }
@@ -50,13 +69,33 @@ struct ContentView: View {
                 currentDrawing?.addLayer(layer)
                 undoneLayers.removeAll()
                 canvas.appendLayer(layer)
+                isModified = true
             }
         }
         .task { savedDrawingNames = SpiroDrawing.savedDrawingNames }
         .alert("Save Drawing", isPresented: $showingSaveAlert) {
             TextField("Name", text: $saveNameInput)
             Button("Save") { confirmSave() }
-            Button("Cancel", role: .cancel) {}
+            Button("Cancel", role: .cancel) { pendingAction = nil }
+        }
+        .alert("Save Current Drawing?", isPresented: $showingSaveBeforeAction) {
+            Button("Save") {
+                saveNameInput = currentDrawingName
+                showingSaveAlert = true
+            }
+            Button("Discard", role: .destructive) {
+                runPendingAction()
+            }
+            Button("Cancel", role: .cancel) {
+                pendingAction = nil
+            }
+        } message: {
+            Text("You have unsaved changes.")
+        }
+        .alert("Reserved Name", isPresented: $showingPresetNameError) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("\"\(saveNameInput)\" is a preset name and cannot be overwritten.")
         }
     }
 
@@ -64,12 +103,33 @@ struct ContentView: View {
 
     private func handleMenuAction(_ action: DrawingMenuView.Action) {
         showingDrawingMenu = false
+
+        if shouldPromptToSave(before: action) {
+            pendingAction = action
+            showingSaveBeforeAction = true
+            return
+        }
+
+        performAction(action)
+    }
+
+    private func shouldPromptToSave(before action: DrawingMenuView.Action) -> Bool {
+        guard let drawing = currentDrawing, !drawing.layers.isEmpty, isModified else { return false }
+        switch action {
+        case .drawExample, .drawNew, .drawSaved, .useAsTemplate, .clear:
+            return true
+        default:
+            return false
+        }
+    }
+
+    private func performAction(_ action: DrawingMenuView.Action) {
         switch action {
         case .drawExample(let n):
             switch n {
-            case 1: drawExample(.example())
-            case 4: drawExample(.example4())
-            case 5: drawExample(.example5())
+            case 1: loadDrawing(.example())
+            case 4: loadDrawing(.example4())
+            case 5: loadDrawing(.example5())
             default: break
             }
         case .drawNew:
@@ -78,12 +138,23 @@ struct ContentView: View {
             showConfigAfterDismiss()
         case .addLayer:
             showConfigAfterDismiss()
+        case .useAsTemplate(let data):
+            clear()
+            currentDrawing = SpiroDrawing()
+            SpiroDialogData.lastData = data
+            showConfigAfterDismiss()
         case .undoLayer:   undoLastLayer()
         case .redoLayer:   redoLastLayer()
         case .save:        saveDrawing()
-        case .drawSaved(let name): drawSavedDrawing(named: name)
+        case .drawSaved(let name): loadSavedDrawing(named: name)
         case .clear:       clear()
         }
+    }
+
+    private func runPendingAction() {
+        guard let action = pendingAction else { return }
+        pendingAction = nil
+        performAction(action)
     }
 
     // Waits for the drawing menu sheet to finish dismissing before showing config.
@@ -94,23 +165,26 @@ struct ContentView: View {
         }
     }
 
-    // MARK: - Actions (equivalent to SpiroDrawingWorkspace methods)
+    // MARK: - Actions
 
-    private func drawExample(_ drawing: SpiroDrawing) {
+    private func loadDrawing(_ drawing: SpiroDrawing) {
         clear()
         currentDrawing = drawing
         canvas.redrawAll(drawing: drawing)
+        // isModified stays false — just loaded, nothing changed yet
     }
 
-    private func drawSavedDrawing(named name: String) {
+    private func loadSavedDrawing(named name: String) {
         guard let drawing = SpiroDrawing.savedDrawing(named: name) else { return }
-        drawExample(drawing)
+        loadDrawing(drawing)
+        currentDrawingName = name
     }
 
     private func clear() {
         currentDrawing = nil
         currentDrawingName = ""
         undoneLayers.removeAll()
+        isModified = false
         canvas.clear()
     }
 
@@ -118,6 +192,7 @@ struct ContentView: View {
         guard let drawing = currentDrawing,
               let layer = drawing.removeLastLayer() else { return }
         undoneLayers.append(layer)
+        isModified = true
         canvas.redrawAll(drawing: drawing)
     }
 
@@ -125,6 +200,7 @@ struct ContentView: View {
         guard let drawing = currentDrawing,
               let layer = undoneLayers.popLast() else { return }
         drawing.addLayer(layer)
+        isModified = true
         canvas.appendLayer(layer)
     }
 
@@ -136,9 +212,15 @@ struct ContentView: View {
 
     private func confirmSave() {
         guard let drawing = currentDrawing, !saveNameInput.isEmpty else { return }
+        guard !SpiroDrawing.presetNames.contains(saveNameInput) else {
+            showingPresetNameError = true
+            return
+        }
         SpiroDrawing.save(drawing, name: saveNameInput)
         currentDrawingName = saveNameInput
         savedDrawingNames = SpiroDrawing.savedDrawingNames
+        isModified = false
+        runPendingAction()
     }
 }
 
