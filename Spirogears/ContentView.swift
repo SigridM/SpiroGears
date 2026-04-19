@@ -25,6 +25,7 @@ struct ContentView: View {
 
     @State private var showingDrawingMenu = false
     @State private var showingConfig = false
+    @State private var showingSettings = false
     @State private var showingSaveAlert = false
     @State private var showingSaveBeforeAction = false
     @State private var showingPresetNameError = false
@@ -55,6 +56,13 @@ struct ContentView: View {
                     .padding(.horizontal, 16)
                     .padding(.vertical, 10)
                     .background(.regularMaterial, in: Capsule())
+
+                Button { showingSettings = true } label: {
+                    Image(systemName: "gearshape")
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                .background(.regularMaterial, in: Capsule())
             }
             .padding(.top, 60)
             .padding(.trailing, 16)
@@ -66,6 +74,10 @@ struct ContentView: View {
                 }
             }
             .presentationDetents([.large, .medium])
+        }
+        .sheet(isPresented: $showingSettings) {
+            NavigationStack { SettingsView() }
+                .presentationDetents([.medium, .large])
         }
         .sheet(isPresented: $showingConfig) {
             SpiroConfigView(data: SpiroDialogData.lastData) { data in
