@@ -22,11 +22,6 @@ struct DrawingMenuView: View {
 
     var body: some View {
         List {
-            Section("Preset Drawings") {
-                Button("Circle")   { onAction(.drawExample(1)) }
-                Button("Star")     { onAction(.drawExample(4)) }
-                Button("Triangle") { onAction(.drawExample(5)) }
-            }
             Section {
                 Button("Draw New...")  { onAction(.drawNew) }
                 Button("Add Layer...") { onAction(.addLayer) }
@@ -48,6 +43,11 @@ struct DrawingMenuView: View {
             }
             Section {
                 Button("Clear", role: .destructive) { onAction(.clear) }
+            }
+            Section("Preset Drawings") {
+                Button("Circle")   { onAction(.drawExample(1)) }
+                Button("Star")     { onAction(.drawExample(4)) }
+                Button("Triangle") { onAction(.drawExample(5)) }
             }
         }
         .navigationTitle("Drawing")
