@@ -11,11 +11,6 @@ struct SpiroConfigView: View {
         NavigationStack {
             Form {
                 Section {
-                    LabeledContent("Outer Ring Notches") {
-                        TextField("Notches", value: $data.outerRingNotches, format: .number)
-                            .multilineTextAlignment(.trailing)
-                            .keyboardType(.numberPad)
-                    }
                     LabeledContent("Inner Ring Notches") {
                         TextField("Notches", value: $data.innerRingNotches, format: .number)
                             .multilineTextAlignment(.trailing)

@@ -24,10 +24,10 @@ class SpiroRing: SpiroCircle {
     // MARK: - Factories
 
     static func example() -> SpiroRing {
-        let r = SpiroRing(); r.innerNotchCircumference = 155; r.outerNotchCircumference = 205; return r
+        let r = SpiroRing(); r.innerNotchCircumference = 155; return r
     }
     static func example2() -> SpiroRing {
-        let r = SpiroRing(); r.innerNotchCircumference = 145; r.outerNotchCircumference = 205; return r
+        let r = SpiroRing(); r.innerNotchCircumference = 145; return r
     }
     static func example3() -> SpiroRing {
         let r = example2(); r.startingNotch = 5; return r
@@ -51,15 +51,15 @@ class SpiroRing: SpiroCircle {
         let r = example2(); r.startingNotch = 35; return r
     }
     static func example10() -> SpiroRing {
-        let r = SpiroRing(); r.innerNotchCircumference = 145; r.outerNotchCircumference = 205; r.startingNotch = 40; return r
+        let r = SpiroRing(); r.innerNotchCircumference = 145; r.startingNotch = 40; return r
     }
     static func example150105() -> SpiroRing {
-        let r = SpiroRing(); r.innerNotchCircumference = 105; r.outerNotchCircumference = 150; return r
+        let r = SpiroRing(); r.innerNotchCircumference = 105; return r
     }
     static func example14496() -> SpiroRing {
-        let r = SpiroRing(); r.innerNotchCircumference = 96; r.outerNotchCircumference = 144; return r
+        let r = SpiroRing(); r.innerNotchCircumference = 96; return r
     }
     static func example210300() -> SpiroRing {
-        let r = SpiroRing(); r.innerNotchCircumference = 210; r.outerNotchCircumference = 300; return r
+        let r = SpiroRing(); r.innerNotchCircumference = 210; return r
     }
 }

@@ -87,18 +87,12 @@ private struct LayerRow: View {
                 Text("Layer \(number)").font(.headline)
                 Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 2) {
                     GridRow {
-                        label("Outer ring"); value(layer.stationaryGuide.outerNotchCircumference)
                         label("Inner ring"); value(layer.stationaryGuide.innerNotchCircumference)
+                        label("Wheel");     value(layer.penGuide.outerNotchCircumference)
                     }
                     GridRow {
-                        label("Wheel");     value(layer.penGuide.outerNotchCircumference)
                         label("Hole");      value(layer.penGuide.storedHoleNumber)
-                    }
-                    if layer.stationaryGuide.startingNotch != 0 {
-                        GridRow {
-                            label("Start"); value(layer.stationaryGuide.startingNotch)
-                            Color.clear; Color.clear
-                        }
+                        label("Start");     value(layer.stationaryGuide.startingNotch)
                     }
                 }
                 .font(.caption)

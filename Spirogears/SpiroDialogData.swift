@@ -1,7 +1,6 @@
 import SwiftUI
 
 struct SpiroDialogData {
-    var outerRingNotches: Int = 150
     var innerRingNotches: Int = 105
     var wheelNotches: Int = 24
     var color: Color = .black
@@ -13,7 +12,6 @@ struct SpiroDialogData {
     func makeRing() -> SpiroRing {
         let r = SpiroRing()
         r.innerNotchCircumference = innerRingNotches
-        r.outerNotchCircumference = outerRingNotches
         r.startingNotch = startingNotch
         return r
     }
@@ -32,7 +30,6 @@ struct SpiroDialogData {
 
 extension SpiroDialogData {
     init(from layer: SpiroLayer) {
-        outerRingNotches = layer.stationaryGuide.outerNotchCircumference
         innerRingNotches = layer.stationaryGuide.innerNotchCircumference
         wheelNotches     = layer.penGuide.outerNotchCircumference
         holeNumber       = layer.penGuide.storedHoleNumber
