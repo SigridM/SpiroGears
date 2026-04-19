@@ -44,12 +44,23 @@ struct ContentView: View {
                     .ignoresSafeArea()
             }
 
-            Button("Drawing") { showingDrawingMenu = true }
-                .padding(.horizontal, 16)
+            HStack(spacing: 8) {
+                Button {
+                    showGears.toggle()
+                } label: {
+                    Image(systemName: showGears ? "gearshape.fill" : "gearshape")
+                }
+                .padding(.horizontal, 14)
                 .padding(.vertical, 10)
                 .background(.regularMaterial, in: Capsule())
-                .padding(.top, 60)
-                .padding(.trailing, 16)
+
+                Button("Drawing") { showingDrawingMenu = true }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(.regularMaterial, in: Capsule())
+            }
+            .padding(.top, 60)
+            .padding(.trailing, 16)
         }
         .sheet(isPresented: $showingDrawingMenu) {
             NavigationStack {
