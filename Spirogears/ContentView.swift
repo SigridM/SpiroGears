@@ -45,14 +45,11 @@ struct ContentView: View {
             }
 
             HStack(spacing: 8) {
-                Button {
-                    showGears.toggle()
-                } label: {
-                    Image(systemName: showGears ? "gearshape.fill" : "gearshape")
-                }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
-                .background(.regularMaterial, in: Capsule())
+                Toggle("Gears", isOn: $showGears)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .background(.regularMaterial, in: Capsule())
+                    .fixedSize()
 
                 Button("Drawing") { showingDrawingMenu = true }
                     .padding(.horizontal, 16)
