@@ -4,13 +4,11 @@ import SwiftUI
 // Draws the stationary ring and the rolling wheel for the given layer.
 // wheelAngle is the wheel-center's angle around the ring center, in degrees from top (0 = top).
 
-private let gearFill      = Color(white: 0.90)
-private let gearGradLeft  = Color(white: 0.84)
-private let gearGradRight = Color(white: 0.96)
-private let gearStroke    = Color(white: 0.60)   // noticeably darker so edges read against the fill
-private let holeGradLeft  = Color(white: 0.76)
-private let holeGradRight = Color(white: 0.92)
-private let holeStroke    = Color(white: 0.45)   // dark enough to make each hole clearly visible
+private let gearFill   = Color.white
+private let gearStroke = Color(white: 0.72)           // gray edge
+private let gearGlow   = Color(white: 0.40).opacity(0.35) // soft gray outer glow for depth
+private let holeFill   = Color(white: 0.82)           // gray so holes read as inset
+private let holeStroke = Color(white: 0.65)
 private let ringBandWidth: CGFloat = 14           // visible ring thickness in points
 
 struct GearOverlayView: View {
@@ -39,19 +37,23 @@ struct GearOverlayView: View {
         let depth  = CGFloat(ring.notchSize * 2 / .pi)
         let count  = ring.innerNotchCircumference
 
+        let disk = Path(ellipseIn: centeredRect(at: center, radius: displayOuterR))
+        let cut  = innerCutPath(center: center, innerRadius: innerR,
+                                notchCount: count, toothDepth: depth)
+
+        // Fill ring band with white, cut inner hole
         context.drawLayer { ctx in
-            ctx.opacity = 0.63
-
-            let disk = Path(ellipseIn: centeredRect(at: center, radius: displayOuterR))
+            ctx.opacity = 0.88
             ctx.fill(disk, with: .color(gearFill))
-            applyGradient(to: disk, center: center, radius: displayOuterR, context: &ctx)
-            ctx.stroke(disk, with: .color(gearStroke), lineWidth: 0.2)
-
-            // Cut inner hole with inward-tooth profile
-            let cut = innerCutPath(center: center, innerRadius: innerR,
-                                   notchCount: count, toothDepth: depth)
             ctx.blendMode = .destinationOut
             ctx.fill(cut, with: .color(.white))
+        }
+
+        // Stroke both edges with a soft cyan-blue glow
+        context.drawLayer { ctx in
+            ctx.addFilter(.shadow(color: gearGlow, radius: 4, x: 0, y: 0))
+            ctx.stroke(disk, with: .color(gearStroke), lineWidth: 1.5)
+            ctx.stroke(cut,  with: .color(gearStroke), lineWidth: 1.5)
         }
     }
 
@@ -84,20 +86,27 @@ struct GearOverlayView: View {
         let path = toothPath(center: wc, rootRadius: outerR, tipRadius: outerR + depth,
                              notchCount: count, startAngle: spinRad, clockwise: false)
 
+        // Fill wheel with white
         context.drawLayer { ctx in
-            ctx.opacity = 0.63
+            ctx.opacity = 0.88
             ctx.fill(path, with: .color(gearFill))
-            applyGradient(to: path, center: wc, radius: outerR, context: &ctx)
-            ctx.stroke(path, with: .color(gearStroke), lineWidth: 0.2)
-            drawHoles(for: wheel, wheelCenter: wc, spinRad: spinRad, context: &ctx)
         }
+
+        // Stroke gear outline with a soft cyan-blue glow
+        context.drawLayer { ctx in
+            ctx.addFilter(.shadow(color: gearGlow, radius: 4, x: 0, y: 0))
+            ctx.stroke(path, with: .color(gearStroke), lineWidth: 1.5)
+        }
+
+        // Holes drawn without shadow so they read as inset depressions
+        drawHoles(for: wheel, wheelCenter: wc, spinRad: spinRad, context: &context)
     }
 
     // MARK: - Holes
 
     // Angular step between consecutive holes, matching the gentle inward spiral
     // seen on physical Spirograph wheels (~13° per hole looks natural).
-    private let holeAngularStep: Double = 25 * .pi / 180
+    private let holeAngularStep: Double = 30 * .pi / 180
 
     private func drawHoles(for wheel: SpiroWheel, wheelCenter: CGPoint,
                             spinRad: Double, context: inout GraphicsContext) {
@@ -117,41 +126,14 @@ struct GearOverlayView: View {
 
             // Each hole steps inward in radius AND rotates slightly, forming a spiral.
             let holeAngle = spinRad + Double(h - 1) * holeAngularStep
-            let hc   = CGPoint(x: wheelCenter.x + r * CGFloat(cos(holeAngle)),
-                               y: wheelCenter.y + r * CGFloat(sin(holeAngle)))
-            let rect = CGRect(x: hc.x - holeR, y: hc.y - holeR,
-                              width: holeR * 2, height: holeR * 2)
-            let holePath = Path(ellipseIn: rect)
+            let hc       = CGPoint(x: wheelCenter.x + r * CGFloat(cos(holeAngle)),
+                                   y: wheelCenter.y + r * CGFloat(sin(holeAngle)))
+            let holePath = Path(ellipseIn: CGRect(x: hc.x - holeR, y: hc.y - holeR,
+                                                  width: holeR * 2, height: holeR * 2))
 
-            var hCtx = context
-            hCtx.clip(to: holePath)
-            hCtx.fill(Path(rect), with: .linearGradient(
-                Gradient(stops: [
-                    .init(color: holeGradLeft,  location: 0),
-                    .init(color: holeGradRight, location: 1)
-                ]),
-                startPoint: CGPoint(x: rect.minX, y: hc.y),
-                endPoint:   CGPoint(x: rect.maxX, y: hc.y)
-            ))
+            context.fill(holePath, with: .color(holeFill))
             context.stroke(holePath, with: .color(holeStroke), lineWidth: 0.8)
         }
-    }
-
-    // MARK: - Gradient helper
-
-    private func applyGradient(to path: Path, center: CGPoint, radius: CGFloat,
-                                context: inout GraphicsContext) {
-        var gCtx = context
-        gCtx.clip(to: path)
-        let rect = centeredRect(at: center, radius: radius)
-        gCtx.fill(Path(rect), with: .linearGradient(
-            Gradient(stops: [
-                .init(color: gearGradLeft,  location: 0),
-                .init(color: gearGradRight, location: 1)
-            ]),
-            startPoint: CGPoint(x: rect.minX, y: center.y),
-            endPoint:   CGPoint(x: rect.maxX, y: center.y)
-        ))
     }
 
     // MARK: - Path generation
