@@ -17,8 +17,7 @@ struct ContentView: View {
     @State private var undoneLayers: [SpiroLayer] = []
     @State private var isModified = false
 
-    // Temporary: will be replaced by a user preference
-    @State private var showGears = true
+    @AppStorage("showGears") private var showGears = true
 
     // Zoom state lifted from SpiroCanvasView so GearOverlayView can share the same scale
     @State private var canvasScale: CGFloat = 1.0

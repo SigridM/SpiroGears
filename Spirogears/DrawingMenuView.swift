@@ -49,6 +49,9 @@ struct DrawingMenuView: View {
             Section {
                 Button("Clear", role: .destructive) { onAction(.clear) }
             }
+            Section {
+                NavigationLink("Settings") { SettingsView() }
+            }
         }
         .navigationTitle("Drawing")
         .navigationBarTitleDisplayMode(.inline)
