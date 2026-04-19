@@ -9,12 +9,11 @@ struct SpiroConfigView: View {
 
     // Returns a user-facing message for the first violated constraint, or nil if valid.
     private var validationError: String? {
-        if data.innerRingNotches < 1  { return "Inner ring notches must be at least 1." }
-        if data.wheelNotches < 1      { return "Wheel notches must be at least 1." }
-        if data.wheelNotches >= data.innerRingNotches {
-            return "Wheel notches must be less than inner ring notches."
-        }
-        if data.holeNumber < 1        { return "Hole number must be at least 1." }
+        if data.innerRingNotches < 1 { return "Inner ring notches must be at least 1." }
+        if data.wheelNotches < 1     { return "Wheel notches must be at least 1." }
+        if data.holeNumber < 1       { return "Hole number must be at least 1." }
+        let maxHole = max(1, data.wheelNotches / 2 - SpiroCircle.invisibleHolesToEdge)
+        if data.holeNumber > maxHole  { return "Hole number must be \(maxHole) or less for a \(data.wheelNotches)-notch wheel." }
         return nil
     }
 
