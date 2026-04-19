@@ -7,6 +7,17 @@ struct SpiroConfigView: View {
     @State var data: SpiroDialogData
     let completion: (SpiroDialogData?) -> Void
 
+    // Returns a user-facing message for the first violated constraint, or nil if valid.
+    private var validationError: String? {
+        if data.innerRingNotches < 1  { return "Inner ring notches must be at least 1." }
+        if data.wheelNotches < 1      { return "Wheel notches must be at least 1." }
+        if data.wheelNotches >= data.innerRingNotches {
+            return "Wheel notches must be less than inner ring notches."
+        }
+        if data.holeNumber < 1        { return "Hole number must be at least 1." }
+        return nil
+    }
+
     var body: some View {
         NavigationStack {
             Form {
@@ -33,6 +44,13 @@ struct SpiroConfigView: View {
                     }
                     ColorPicker("Color", selection: $data.color)
                 }
+                if let error = validationError {
+                    Section {
+                        Text(error)
+                            .foregroundStyle(.red)
+                            .font(.footnote)
+                    }
+                }
             }
             .navigationTitle("Add Layer")
             .navigationBarTitleDisplayMode(.inline)
@@ -45,6 +63,7 @@ struct SpiroConfigView: View {
                         SpiroDialogData.lastData = data
                         completion(data)
                     }
+                    .disabled(validationError != nil)
                 }
             }
         }
