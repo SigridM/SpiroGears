@@ -27,10 +27,9 @@ struct SettingsView: View {
     var body: some View {
         Form {
             Section("Drawing") {
-                Toggle("Show Gears", isOn: $showGears)
-                    .disabled(manualDrawing)    // locked on when Manual Drawing is enabled
                 Toggle("Manual Drawing", isOn: $manualDrawing)
                     .onChange(of: manualDrawing) { _, on in
+                        // Manual Drawing requires gears visible and animation off
                         if on { showGears = true; animate = false }
                     }
             }
