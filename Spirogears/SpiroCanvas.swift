@@ -210,8 +210,10 @@ class SpiroCanvas: ObservableObject {
     }
 
     // Stroke from the last committed step up to `step`, updating the overlay image.
+    // step may be positive (CW) or negative (CCW); the direction is determined by
+    // whichever way the caller moves step away from zero.
     func updateManualDrawing(toStep step: Int) {
-        guard isManualDrawing, let layer = manualLayer, step > manualLastStep else { return }
+        guard isManualDrawing, let layer = manualLayer, step != manualLastStep else { return }
         guard canvasSize.width > 0 else { return }
 
         let rect   = CGRect(origin: .zero, size: canvasSize)
@@ -226,8 +228,14 @@ class SpiroCanvas: ObservableObject {
             ctx.cgContext.setStrokeColor(color)
             ctx.cgContext.setLineWidth(1.0)
             ctx.cgContext.move(to: layer.point(at: manualLastStep, in: rect))
-            for j in (manualLastStep + 1)...step {
-                ctx.cgContext.addLine(to: layer.point(at: j, in: rect))
+            if step > manualLastStep {
+                for j in (manualLastStep + 1)...step {
+                    ctx.cgContext.addLine(to: layer.point(at: j, in: rect))
+                }
+            } else {
+                for j in stride(from: manualLastStep - 1, through: step, by: -1) {
+                    ctx.cgContext.addLine(to: layer.point(at: j, in: rect))
+                }
             }
             ctx.cgContext.strokePath()
             ctx.cgContext.restoreGState()
@@ -240,7 +248,7 @@ class SpiroCanvas: ObservableObject {
     // Merge the manual overlay into the persistent canvas. Returns the layer if any
     // strokes were drawn, nil if the user lifted without dragging.
     func endManualDrawing() -> SpiroLayer? {
-        let drawnLayer = manualLastStep > 0 ? manualLayer : nil
+        let drawnLayer = manualLastStep != 0 ? manualLayer : nil
         if let overlay = manualOverlayImage, drawnLayer != nil {
             let size = renderSize
             renderedImage = UIGraphicsImageRenderer(size: size).image { ctx in

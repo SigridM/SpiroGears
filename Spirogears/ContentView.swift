@@ -27,8 +27,9 @@ struct ContentView: View {
     @State private var canvasLastScale: CGFloat = 1.0
 
     // Manual drawing gesture state
-    @State private var manualPrevTranslation: CGSize  = .zero
+    @State private var manualPrevTranslation: CGSize    = .zero
     @State private var manualAccumulatedNotches: Double = 0
+    @State private var manualDirection: Int             = 0  // +1 CW, -1 CCW, 0 not yet set
 
     @State private var showingDrawingMenu = false
     @State private var showingConfig = false
@@ -69,31 +70,9 @@ struct ContentView: View {
                     .onTapGesture { canvas.skipAnimation() }
             }
 
-            HStack(spacing: 8) {
-                Toggle("Gears", isOn: $showGears)
-                    .disabled(manualDrawing)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 10)
-                    .background(.regularMaterial, in: Capsule())
-                    .fixedSize()
-
-                Button("Drawing") { showingDrawingMenu = true }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
-                    .background(.regularMaterial, in: Capsule())
-
-                Button { showingSettings = true } label: {
-                    Image(systemName: "gearshape")
-                }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
-                .background(.regularMaterial, in: Capsule())
-            }
-            .padding(.top, 60)
-            .padding(.trailing, 16)
-
-            // Manual drawing overlay — last in ZStack so it sits above the controls.
-            // Color.clear captures drags; the Finish button sits on top of it.
+            // Manual drawing drag capture — below the controls so the controls
+            // remain tappable. On a real device a recognised DragGesture keeps the
+            // touch even when the finger moves over the button area.
             if canvas.isManualDrawing {
                 Color.clear
                     .contentShape(Rectangle())
@@ -103,17 +82,36 @@ struct ContentView: View {
                             .onChanged { handleManualDrag($0) }
                             .onEnded   { _ in manualPrevTranslation = .zero }
                     )
-
-                VStack {
-                    Spacer()
-                    Button("Finish Layer") { finalizeManualDrawing() }
-                        .padding(.horizontal, 24)
-                        .padding(.vertical, 12)
-                        .background(.regularMaterial, in: Capsule())
-                        .padding(.bottom, 40)
-                }
-                .ignoresSafeArea()
             }
+
+            HStack(spacing: 8) {
+                Toggle("Gears", isOn: $showGears)
+                    .disabled(manualDrawing)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .background(.regularMaterial, in: Capsule())
+                    .fixedSize()
+
+                Button("Drawing") {
+                    if canvas.isManualDrawing { finalizeManualDrawing() }
+                    showingDrawingMenu = true
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .background(.regularMaterial, in: Capsule())
+
+                Button {
+                    if canvas.isManualDrawing { finalizeManualDrawing() }
+                    showingSettings = true
+                } label: {
+                    Image(systemName: "gearshape")
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                .background(.regularMaterial, in: Capsule())
+            }
+            .padding(.top, 60)
+            .padding(.trailing, 16)
         }
         .sheet(isPresented: $showingDrawingMenu) {
             NavigationStack {
@@ -264,6 +262,7 @@ struct ContentView: View {
     private func clear() {
         manualPrevTranslation    = .zero
         manualAccumulatedNotches = 0
+        manualDirection          = 0
         currentDrawing = nil
         currentDrawingName = ""
         undoneLayers.removeAll()
@@ -338,20 +337,32 @@ struct ContentView: View {
         let dot   = Double(va.x * vb.x + va.y * vb.y)
         let deltaAngle = atan2(cross, dot)  // radians
 
-        // Convert angular delta to ring-tooth units (one tooth = one step).
-        // Only accumulate forward (positive) motion so that a brief backward slip
-        // of the finger doesn't require re-earning already-drawn steps.
-        let deltaNotches = deltaAngle * Double(ring.innerNotchCircumference) / (2 * .pi)
-        if deltaNotches > 0 {
-            manualAccumulatedNotches += deltaNotches
+        // Lock in direction from the first significant movement.
+        if manualDirection == 0 && abs(deltaAngle) > 0.01 {
+            manualDirection = deltaAngle > 0 ? 1 : -1
+        }
+        guard manualDirection != 0 else {
+            manualPrevTranslation = value.translation
+            return
         }
 
-        let step = max(0, Int(manualAccumulatedNotches))
+        // Accumulate magnitude; apply the locked direction when computing the step.
+        // Clamp at stepCount — the pen is back at the starting point there and
+        // further dragging would just retrace the same path.
+        let deltaNotches = abs(deltaAngle * Double(ring.innerNotchCircumference) / (2 * .pi))
+        manualAccumulatedNotches += deltaNotches
+        let stepCount = layer.stepCount
+        let rawStep = Int(manualAccumulatedNotches)
+        let step = manualDirection * min(rawStep, stepCount)
         canvas.updateManualDrawing(toStep: step)
+        if rawStep >= stepCount {
+            finalizeManualDrawing()
+        }
         manualPrevTranslation = value.translation
     }
 
-    // Called by the "Finish Layer" button. Commits whatever has been drawn so far.
+    // Called when the Drawing button is tapped mid-draw, or when the wheel
+    // completes a full cycle. Commits whatever has been drawn so far.
     private func finalizeManualDrawing() {
         if let layer = canvas.endManualDrawing() {
             currentDrawing?.addLayer(layer)
@@ -362,6 +373,7 @@ struct ContentView: View {
         }
         manualPrevTranslation    = .zero
         manualAccumulatedNotches = 0
+        manualDirection          = 0
     }
 }
 
