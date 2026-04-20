@@ -15,10 +15,18 @@ class SpiroCanvas: ObservableObject {
     @Published private(set) var animationWheelAngle: Double = 0
     @Published private(set) var animatingLayer: SpiroLayer?
 
+    @Published private(set) var isManualDrawing = false
+    @Published private(set) var manualOverlayImage: UIImage?
+    @Published private(set) var manualWheelAngle: Double = 0
+    @Published private(set) var manualLayer: SpiroLayer?
+    private var manualLastStep: Int = 0
+
     private var animationTask: Task<Void, Never>?
     private var pendingDrawing: SpiroDrawing?
 
     private var canvasSize: CGSize = .zero
+
+    var size: CGSize { canvasSize }
 
     // The render canvas is 2× the screen in each dimension.
     // Drawings are translated to the center of this larger canvas.
@@ -190,6 +198,73 @@ class SpiroCanvas: ObservableObject {
         pendingDrawing        = nil
     }
 
+    // MARK: - Manual Drawing
+
+    func beginManualDrawing(layer: SpiroLayer) {
+        cancelAnimation()
+        manualLayer        = layer
+        manualLastStep     = 0
+        manualWheelAngle   = 0
+        manualOverlayImage = nil
+        isManualDrawing    = true
+    }
+
+    // Stroke from the last committed step up to `step`, updating the overlay image.
+    func updateManualDrawing(toStep step: Int) {
+        guard isManualDrawing, let layer = manualLayer, step > manualLastStep else { return }
+        guard canvasSize.width > 0 else { return }
+
+        let rect   = CGRect(origin: .zero, size: canvasSize)
+        let offset = renderOffset
+        let size   = renderSize
+        let color  = layer.penColor.cgColor
+
+        manualOverlayImage = UIGraphicsImageRenderer(size: size).image { ctx in
+            manualOverlayImage?.draw(at: .zero)
+            ctx.cgContext.saveGState()
+            ctx.cgContext.translateBy(x: offset.x, y: offset.y)
+            ctx.cgContext.setStrokeColor(color)
+            ctx.cgContext.setLineWidth(1.0)
+            ctx.cgContext.move(to: layer.point(at: manualLastStep, in: rect))
+            for j in (manualLastStep + 1)...step {
+                ctx.cgContext.addLine(to: layer.point(at: j, in: rect))
+            }
+            ctx.cgContext.strokePath()
+            ctx.cgContext.restoreGState()
+        }
+
+        manualLastStep   = step
+        manualWheelAngle = layer.stationaryGuide.angleIncrement * Double(step)
+    }
+
+    // Merge the manual overlay into the persistent canvas. Returns the layer if any
+    // strokes were drawn, nil if the user lifted without dragging.
+    func endManualDrawing() -> SpiroLayer? {
+        let drawnLayer = manualLastStep > 0 ? manualLayer : nil
+        if let overlay = manualOverlayImage, drawnLayer != nil {
+            let size = renderSize
+            renderedImage = UIGraphicsImageRenderer(size: size).image { ctx in
+                renderedImage?.draw(at: .zero)
+                overlay.draw(at: .zero)
+            }
+        }
+        isManualDrawing    = false
+        manualOverlayImage = nil
+        manualWheelAngle   = 0
+        manualLayer        = nil
+        manualLastStep     = 0
+        return drawnLayer
+    }
+
+    func cancelManualDrawing() {
+        guard isManualDrawing else { return }
+        isManualDrawing    = false
+        manualOverlayImage = nil
+        manualWheelAngle   = 0
+        manualLayer        = nil
+        manualLastStep     = 0
+    }
+
     // MARK: - Rendering
 
     func appendLayer(_ layer: SpiroLayer) {
@@ -211,6 +286,7 @@ class SpiroCanvas: ObservableObject {
 
     func redrawAll(drawing: SpiroDrawing) {
         cancelAnimation()
+        cancelManualDrawing()
         guard canvasSize.width > 0, canvasSize.height > 0 else { return }
         let rect   = CGRect(origin: .zero, size: canvasSize)
         let offset = renderOffset
@@ -224,6 +300,7 @@ class SpiroCanvas: ObservableObject {
 
     func clear() {
         cancelAnimation()
+        cancelManualDrawing()
         renderedImage = nil
     }
 }
@@ -252,6 +329,11 @@ struct SpiroCanvasView: View {
                     }
                     if let animImage = canvas.animationOverlayImage {
                         Image(uiImage: animImage)
+                            .scaleEffect(scale)
+                            .allowsHitTesting(false)
+                    }
+                    if let manualImage = canvas.manualOverlayImage {
+                        Image(uiImage: manualImage)
                             .scaleEffect(scale)
                             .allowsHitTesting(false)
                     }

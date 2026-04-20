@@ -20,10 +20,15 @@ struct ContentView: View {
     @AppStorage("showGears")      private var showGears      = true
     @AppStorage("animate")        private var animate        = false
     @AppStorage("animationSpeed") private var animationSpeed = AnimationSpeed.medium
+    @AppStorage("manualDrawing")  private var manualDrawing  = false
 
     // Zoom state lifted from SpiroCanvasView so GearOverlayView can share the same scale
     @State private var canvasScale: CGFloat = 1.0
     @State private var canvasLastScale: CGFloat = 1.0
+
+    // Manual drawing gesture state
+    @State private var manualPrevTranslation: CGSize  = .zero
+    @State private var manualAccumulatedNotches: Double = 0
 
     @State private var showingDrawingMenu = false
     @State private var showingConfig = false
@@ -41,10 +46,18 @@ struct ContentView: View {
             SpiroCanvasView(canvas: canvas, scale: $canvasScale, lastScale: $canvasLastScale)
                 .ignoresSafeArea()
 
-            if showGears, let layer = canvas.animatingLayer ?? currentDrawing?.layers.last {
-                GearOverlayView(layer: layer, wheelAngle: canvas.animationWheelAngle)
-                    .scaleEffect(canvasScale)
-                    .ignoresSafeArea()
+            if showGears {
+                let overlayLayer = canvas.animatingLayer
+                                ?? (canvas.isManualDrawing ? canvas.manualLayer : nil)
+                                ?? currentDrawing?.layers.last
+                let overlayAngle = canvas.isManualDrawing
+                                 ? canvas.manualWheelAngle
+                                 : canvas.animationWheelAngle
+                if let layer = overlayLayer {
+                    GearOverlayView(layer: layer, wheelAngle: overlayAngle)
+                        .scaleEffect(canvasScale)
+                        .ignoresSafeArea()
+                }
             }
 
             // Tap-to-skip overlay: captures a single tap anywhere on the canvas
@@ -58,6 +71,7 @@ struct ContentView: View {
 
             HStack(spacing: 8) {
                 Toggle("Gears", isOn: $showGears)
+                    .disabled(manualDrawing)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 10)
                     .background(.regularMaterial, in: Capsule())
@@ -77,6 +91,29 @@ struct ContentView: View {
             }
             .padding(.top, 60)
             .padding(.trailing, 16)
+
+            // Manual drawing overlay — last in ZStack so it sits above the controls.
+            // Color.clear captures drags; the Finish button sits on top of it.
+            if canvas.isManualDrawing {
+                Color.clear
+                    .contentShape(Rectangle())
+                    .ignoresSafeArea()
+                    .gesture(
+                        DragGesture(minimumDistance: 0)
+                            .onChanged { handleManualDrag($0) }
+                            .onEnded   { _ in manualPrevTranslation = .zero }
+                    )
+
+                VStack {
+                    Spacer()
+                    Button("Finish Layer") { finalizeManualDrawing() }
+                        .padding(.horizontal, 24)
+                        .padding(.vertical, 12)
+                        .background(.regularMaterial, in: Capsule())
+                        .padding(.bottom, 40)
+                }
+                .ignoresSafeArea()
+            }
         }
         .sheet(isPresented: $showingDrawingMenu) {
             NavigationStack {
@@ -96,14 +133,20 @@ struct ContentView: View {
                 guard let data else { return }
                 if currentDrawing == nil { currentDrawing = SpiroDrawing() }
                 let layer = data.makeLayer()
-                currentDrawing?.addLayer(layer)
                 undoneLayers.removeAll()
-                if animate {
+                if manualDrawing {
+                    // Don't commit to the drawing yet — wait for the drag to finish.
+                    canvas.beginManualDrawing(layer: layer)
+                    isModified = true
+                } else if animate {
+                    currentDrawing?.addLayer(layer)
                     canvas.animateLayer(layer, pointsPerFrame: animationSpeed.pointsPerFrame)
+                    isModified = true
                 } else {
+                    currentDrawing?.addLayer(layer)
                     canvas.appendLayer(layer)
+                    isModified = true
                 }
-                isModified = true
             }
         }
         .task { savedDrawingNames = SpiroDrawing.savedDrawingNames }
@@ -219,6 +262,8 @@ struct ContentView: View {
     }
 
     private func clear() {
+        manualPrevTranslation    = .zero
+        manualAccumulatedNotches = 0
         currentDrawing = nil
         currentDrawingName = ""
         undoneLayers.removeAll()
@@ -259,6 +304,64 @@ struct ContentView: View {
         savedDrawingNames = SpiroDrawing.savedDrawingNames
         isModified = false
         runPendingAction()
+    }
+
+    // MARK: - Manual Drawing
+
+    private func handleManualDrag(_ value: DragGesture.Value) {
+        guard let layer = canvas.manualLayer else { return }
+        let ring = layer.stationaryGuide
+        let cs   = canvas.size
+
+        // Ring center in view coordinates (matches GearOverlayView geometry).
+        let ringCenter = CGPoint(x: cs.width  / 2 + layer.offset.x,
+                                 y: cs.height / 2 + layer.offset.y)
+
+        // Reconstruct the previous location from accumulated translation.
+        let prev = CGPoint(x: value.startLocation.x + manualPrevTranslation.width,
+                           y: value.startLocation.y + manualPrevTranslation.height)
+        let curr = value.location
+
+        // Vectors from ring center to previous and current touch positions.
+        let va = CGPoint(x: prev.x - ringCenter.x, y: prev.y - ringCenter.y)
+        let vb = CGPoint(x: curr.x - ringCenter.x, y: curr.y - ringCenter.y)
+
+        // Skip degenerate vectors (finger right on the center, or no movement).
+        guard hypot(Double(va.x), Double(va.y)) > 1,
+              hypot(Double(vb.x), Double(vb.y)) > 1 else {
+            manualPrevTranslation = value.translation
+            return
+        }
+
+        // Signed angle from va to vb around the ring center (positive = clockwise).
+        let cross = Double(va.x * vb.y - va.y * vb.x)
+        let dot   = Double(va.x * vb.x + va.y * vb.y)
+        let deltaAngle = atan2(cross, dot)  // radians
+
+        // Convert angular delta to ring-tooth units (one tooth = one step).
+        // Only accumulate forward (positive) motion so that a brief backward slip
+        // of the finger doesn't require re-earning already-drawn steps.
+        let deltaNotches = deltaAngle * Double(ring.innerNotchCircumference) / (2 * .pi)
+        if deltaNotches > 0 {
+            manualAccumulatedNotches += deltaNotches
+        }
+
+        let step = max(0, Int(manualAccumulatedNotches))
+        canvas.updateManualDrawing(toStep: step)
+        manualPrevTranslation = value.translation
+    }
+
+    // Called by the "Finish Layer" button. Commits whatever has been drawn so far.
+    private func finalizeManualDrawing() {
+        if let layer = canvas.endManualDrawing() {
+            currentDrawing?.addLayer(layer)
+            // isModified was already set true when the config was confirmed.
+        } else {
+            // No strokes were drawn — just cancel silently.
+            canvas.cancelManualDrawing()
+        }
+        manualPrevTranslation    = .zero
+        manualAccumulatedNotches = 0
     }
 }
 
