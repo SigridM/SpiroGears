@@ -20,29 +20,33 @@ class SpiroLayer {
         CGPoint(x: rect.midX + offset.x, y: rect.midY + offset.y)
     }
 
-    // Port of drawLayerOn: — returns a path instead of drawing directly to a widget
-    func path(in rect: CGRect) -> UIBezierPath {
+    // Total number of steps to complete one full cycle.
+    var stepCount: Int {
+        lcm(stationaryGuide.notchCircumference, penGuide.notchCircumference)
+    }
+
+    // Pen position at a given step, in the coordinate space of rect.
+    func point(at step: Int, in rect: CGRect) -> CGPoint {
         let v1Len = stationaryGuide.centerToCenterRadius(penGuide: penGuide)
         let v2Len = penGuide.penRadius
-        let steps = lcm(stationaryGuide.notchCircumference, penGuide.notchCircumference)
+        let c     = center(in: rect)
+        func toRad(_ deg: Double) -> Double { deg * .pi / 180.0 }
+        let thetaDeg = stationaryGuide.angleIncrement * Double(step) + stationaryGuide.originalAngle - 90.0
+        let alphaDeg = -penGuide.angleIncrement * Double(step) + thetaDeg
+        return CGPoint(
+            x: v1Len * cos(toRad(thetaDeg)) + v2Len * cos(toRad(alphaDeg)) + c.x,
+            y: v1Len * sin(toRad(thetaDeg)) + v2Len * sin(toRad(alphaDeg)) + c.y
+        )
+    }
+
+    // Port of drawLayerOn: — returns a path instead of drawing directly to a widget
+    func path(in rect: CGRect) -> UIBezierPath {
+        let steps = stepCount
         guard steps > 0 else { return UIBezierPath() }
-        let c = center(in: rect)
-
-        func toRad(_ degrees: Double) -> Double { degrees * .pi / 180.0 }
-
-        func point(at i: Int) -> CGPoint {
-            let thetaDeg = stationaryGuide.angleIncrement * Double(i) + stationaryGuide.originalAngle - 90.0
-            let alphaDeg = -penGuide.angleIncrement * Double(i) + thetaDeg
-            return CGPoint(
-                x: v1Len * cos(toRad(thetaDeg)) + v2Len * cos(toRad(alphaDeg)) + c.x,
-                y: v1Len * sin(toRad(thetaDeg)) + v2Len * sin(toRad(alphaDeg)) + c.y
-            )
-        }
-
         let path = UIBezierPath()
-        path.move(to: point(at: 0))
+        path.move(to: point(at: 0, in: rect))
         for i in 1...steps {
-            path.addLine(to: point(at: i))
+            path.addLine(to: point(at: i, in: rect))
         }
         return path
     }

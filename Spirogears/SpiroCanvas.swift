@@ -10,6 +10,14 @@ import UIKit
 @MainActor
 class SpiroCanvas: ObservableObject {
     @Published private(set) var renderedImage: UIImage?
+    @Published private(set) var animationOverlayImage: UIImage?
+    @Published private(set) var isAnimating = false
+    @Published private(set) var animationWheelAngle: Double = 0
+    @Published private(set) var animatingLayer: SpiroLayer?
+
+    private var animationTask: Task<Void, Never>?
+    private var pendingDrawing: SpiroDrawing?
+
     private var canvasSize: CGSize = .zero
 
     // The render canvas is 2× the screen in each dimension.
@@ -31,6 +39,159 @@ class SpiroCanvas: ObservableObject {
         canvasSize = size
     }
 
+    // MARK: - Animation
+
+    // Animate a single newly-added layer.
+    func animateLayer(_ layer: SpiroLayer, pointsPerFrame: Int) {
+        guard canvasSize.width > 0, canvasSize.height > 0 else { appendLayer(layer); return }
+        guard layer.stepCount > 0 else { appendLayer(layer); return }
+
+        pendingDrawing  = nil
+        animatingLayer  = layer
+        isAnimating     = true
+        animationWheelAngle    = 0
+        animationOverlayImage  = nil
+
+        animationTask = Task { @MainActor in
+            await runAnimation(for: layer, pointsPerFrame: pointsPerFrame)
+            guard !Task.isCancelled else { return }
+            isAnimating    = false
+            animatingLayer = nil
+        }
+    }
+
+    // Animate all layers in a drawing sequentially (e.g., loading a preset).
+    func animateDrawing(_ drawing: SpiroDrawing, pointsPerFrame: Int) {
+        cancelAnimation()
+        let layers = drawing.layers
+        guard !layers.isEmpty, canvasSize.width > 0, canvasSize.height > 0 else {
+            redrawAll(drawing: drawing)
+            return
+        }
+
+        pendingDrawing  = drawing
+        isAnimating     = true
+        animationWheelAngle   = 0
+        animationOverlayImage = nil
+
+        animationTask = Task { @MainActor in
+            for layer in layers {
+                guard !Task.isCancelled else { break }
+                animatingLayer = layer
+                await runAnimation(for: layer, pointsPerFrame: pointsPerFrame)
+            }
+            guard !Task.isCancelled else { return }
+            isAnimating    = false
+            animatingLayer = nil
+            pendingDrawing = nil
+        }
+    }
+
+    // Core per-layer animation loop; can be awaited so layers chain sequentially.
+    private func runAnimation(for layer: SpiroLayer, pointsPerFrame: Int) async {
+        let steps  = layer.stepCount
+        let rect   = CGRect(origin: .zero, size: canvasSize)
+        let offset = renderOffset
+        let size   = renderSize
+        let color  = layer.penColor.cgColor
+
+        var overlayImage: UIImage? = nil
+        var i = 0
+
+        while i < steps {
+            guard !Task.isCancelled else { return }
+
+            let batchEnd = min(i + pointsPerFrame, steps)
+
+            overlayImage = UIGraphicsImageRenderer(size: size).image { ctx in
+                overlayImage?.draw(at: .zero)
+                ctx.cgContext.saveGState()
+                ctx.cgContext.translateBy(x: offset.x, y: offset.y)
+                ctx.cgContext.setStrokeColor(color)
+                ctx.cgContext.setLineWidth(1.0)
+                ctx.cgContext.move(to: layer.point(at: i, in: rect))
+                for j in (i + 1)...batchEnd {
+                    ctx.cgContext.addLine(to: layer.point(at: j, in: rect))
+                }
+                ctx.cgContext.strokePath()
+                ctx.cgContext.restoreGState()
+            }
+
+            animationOverlayImage  = overlayImage
+            animationWheelAngle    = layer.stationaryGuide.angleIncrement * Double(batchEnd)
+            i = batchEnd
+            await Task.yield()
+        }
+
+        guard !Task.isCancelled else { return }
+        // Merge this layer's overlay into the persistent canvas image.
+        let finalOverlay = overlayImage
+        renderedImage = UIGraphicsImageRenderer(size: size).image { ctx in
+            renderedImage?.draw(at: .zero)
+            finalOverlay?.draw(at: .zero)
+        }
+        animationOverlayImage = nil
+        animationWheelAngle   = 0
+    }
+
+    // Complete the in-progress animation immediately (tap-to-skip).
+    func skipAnimation() {
+        guard isAnimating else { return }
+        let capturedOverlay = animationOverlayImage
+        let capturedLayer   = animatingLayer
+        let capturedDrawing = pendingDrawing
+
+        animationTask?.cancel()
+        animationTask         = nil
+        animationOverlayImage = nil
+        isAnimating           = false
+        animationWheelAngle   = 0
+        animatingLayer        = nil
+        pendingDrawing        = nil
+
+        let rect   = CGRect(origin: .zero, size: canvasSize)
+        let offset = renderOffset
+        let size   = renderSize
+
+        if let drawing = capturedDrawing {
+            // Redraw all layers in the drawing from scratch.
+            renderedImage = UIGraphicsImageRenderer(size: size).image { ctx in
+                ctx.cgContext.saveGState()
+                ctx.cgContext.translateBy(x: offset.x, y: offset.y)
+                drawing.draw(in: ctx.cgContext, rect: rect)
+                ctx.cgContext.restoreGState()
+            }
+        } else if let layer = capturedLayer {
+            // Complete the single in-progress layer.
+            renderedImage = UIGraphicsImageRenderer(size: size).image { ctx in
+                renderedImage?.draw(at: .zero)
+                capturedOverlay?.draw(at: .zero)
+                ctx.cgContext.saveGState()
+                ctx.cgContext.translateBy(x: offset.x, y: offset.y)
+                let path = layer.path(in: rect)
+                ctx.cgContext.setStrokeColor(layer.penColor.cgColor)
+                ctx.cgContext.setLineWidth(1.0)
+                ctx.cgContext.addPath(path.cgPath)
+                ctx.cgContext.strokePath()
+                ctx.cgContext.restoreGState()
+            }
+        }
+    }
+
+    // Cancel and discard any in-progress animation (e.g., on clear / undo).
+    func cancelAnimation() {
+        guard isAnimating else { return }
+        animationTask?.cancel()
+        animationTask         = nil
+        animationOverlayImage = nil
+        isAnimating           = false
+        animationWheelAngle   = 0
+        animatingLayer        = nil
+        pendingDrawing        = nil
+    }
+
+    // MARK: - Rendering
+
     func appendLayer(_ layer: SpiroLayer) {
         guard canvasSize.width > 0, canvasSize.height > 0 else { return }
         let rect   = CGRect(origin: .zero, size: canvasSize)
@@ -49,6 +210,7 @@ class SpiroCanvas: ObservableObject {
     }
 
     func redrawAll(drawing: SpiroDrawing) {
+        cancelAnimation()
         guard canvasSize.width > 0, canvasSize.height > 0 else { return }
         let rect   = CGRect(origin: .zero, size: canvasSize)
         let offset = renderOffset
@@ -61,6 +223,7 @@ class SpiroCanvas: ObservableObject {
     }
 
     func clear() {
+        cancelAnimation()
         renderedImage = nil
     }
 }
@@ -84,6 +247,11 @@ struct SpiroCanvasView: View {
                         // allowsHitTesting(false): the oversized layout footprint would
                         // otherwise absorb gestures before they reached the recognisers below.
                         Image(uiImage: image)
+                            .scaleEffect(scale)
+                            .allowsHitTesting(false)
+                    }
+                    if let animImage = canvas.animationOverlayImage {
+                        Image(uiImage: animImage)
                             .scaleEffect(scale)
                             .allowsHitTesting(false)
                     }

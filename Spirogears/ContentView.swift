@@ -17,7 +17,9 @@ struct ContentView: View {
     @State private var undoneLayers: [SpiroLayer] = []
     @State private var isModified = false
 
-    @AppStorage("showGears") private var showGears = true
+    @AppStorage("showGears")      private var showGears      = true
+    @AppStorage("animate")        private var animate        = false
+    @AppStorage("animationSpeed") private var animationSpeed = AnimationSpeed.medium
 
     // Zoom state lifted from SpiroCanvasView so GearOverlayView can share the same scale
     @State private var canvasScale: CGFloat = 1.0
@@ -39,10 +41,19 @@ struct ContentView: View {
             SpiroCanvasView(canvas: canvas, scale: $canvasScale, lastScale: $canvasLastScale)
                 .ignoresSafeArea()
 
-            if showGears, let layer = currentDrawing?.layers.last {
-                GearOverlayView(layer: layer)
+            if showGears, let layer = canvas.animatingLayer ?? currentDrawing?.layers.last {
+                GearOverlayView(layer: layer, wheelAngle: canvas.animationWheelAngle)
                     .scaleEffect(canvasScale)
                     .ignoresSafeArea()
+            }
+
+            // Tap-to-skip overlay: captures a single tap anywhere on the canvas
+            // during animation and completes the drawing instantly.
+            if canvas.isAnimating {
+                Color.clear
+                    .contentShape(Rectangle())
+                    .ignoresSafeArea()
+                    .onTapGesture { canvas.skipAnimation() }
             }
 
             HStack(spacing: 8) {
@@ -87,7 +98,11 @@ struct ContentView: View {
                 let layer = data.makeLayer()
                 currentDrawing?.addLayer(layer)
                 undoneLayers.removeAll()
-                canvas.appendLayer(layer)
+                if animate {
+                    canvas.animateLayer(layer, pointsPerFrame: animationSpeed.pointsPerFrame)
+                } else {
+                    canvas.appendLayer(layer)
+                }
                 isModified = true
             }
         }
@@ -189,7 +204,11 @@ struct ContentView: View {
     private func loadDrawing(_ drawing: SpiroDrawing) {
         clear()
         currentDrawing = drawing
-        canvas.redrawAll(drawing: drawing)
+        if animate {
+            canvas.animateDrawing(drawing, pointsPerFrame: animationSpeed.pointsPerFrame)
+        } else {
+            canvas.redrawAll(drawing: drawing)
+        }
         // isModified stays false — just loaded, nothing changed yet
     }
 

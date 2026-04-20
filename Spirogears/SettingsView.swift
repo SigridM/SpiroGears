@@ -8,9 +8,9 @@ enum AnimationSpeed: String, CaseIterable, Identifiable {
     var label: String { rawValue.capitalized }
     var pointsPerFrame: Int {
         switch self {
-        case .slow:   return 10
-        case .medium: return 30
-        case .fast:   return 100
+        case .slow:   return 2
+        case .medium: return 10
+        case .fast:   return 20
         }
     }
 }
