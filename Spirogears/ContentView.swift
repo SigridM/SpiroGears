@@ -30,6 +30,7 @@ struct ContentView: View {
     @State private var manualPrevTranslation: CGSize    = .zero
     @State private var manualAccumulatedNotches: Double = 0
     @State private var manualDirection: Int             = 0  // +1 CW, -1 CCW, 0 not yet set
+    @State private var manualJumpStep: Int              = 0  // absolute step at which drawing started
     // Size of the drag-capture view (same coordinate system as GearOverlayView).
     // canvas.size may differ because its GeometryReader is inside a view that has
     // .ignoresSafeArea() applied externally, which can give a different height.
@@ -294,6 +295,7 @@ struct ContentView: View {
         manualPrevTranslation    = .zero
         manualAccumulatedNotches = 0
         manualDirection          = 0
+        manualJumpStep           = 0
         manualDragActive         = false
         currentDrawing = nil
         currentDrawingName = ""
@@ -374,11 +376,12 @@ struct ContentView: View {
         let deltaAngle = atan2(cross, dot)  // radians
 
         // Lock in direction from the first significant movement.
+        // This runs even when the cursor is outside the ring so the direction
+        // is captured regardless of where the user starts their drag.
         if manualDirection == 0 && abs(deltaAngle) > 0.01 {
             manualDirection = deltaAngle > 0 ? 1 : -1
 
-            // Seed accumulated notches so the wheel snaps to the cursor's current
-            // angular position instead of always starting at 12 o'clock (step 0).
+            // Snap the wheel to the cursor's current angular position.
             // Cursor angle relative to ring center → convert to a fractional step.
             let cursorRad = atan2(Double(curr.y - ringCenter.y), Double(curr.x - ringCenter.x))
             // thetaDeg(step) = angleIncrement*step + originalAngle - 90
@@ -391,22 +394,35 @@ struct ContentView: View {
             let fwdNotches = ((startFrac.truncatingRemainder(dividingBy: Double(stepCount)))
                               + Double(stepCount))
                              .truncatingRemainder(dividingBy: Double(stepCount))
-            // CW direction: start at fwdNotches (gear advances to cursor position).
-            // CCW direction: start at stepCount - fwdNotches, because CCW steps count
-            //   down from stepCount toward 0, and the orbital angle goes backward.
-            //   (stepCount - fwdNotches) % stepCount handles the 12 o'clock edge case.
-            let initialNotches: Double
+            // The jump step is the absolute step at which drawing will start.
+            // For CW:  jumpStep = +fwdNotches (step advances positively)
+            // For CCW: jumpStep = -(stepCount - fwdNotches), which places the wheel
+            //          at the cursor position (step ≡ fwdNotches mod stepCount) and
+            //          lets the CCW draw cover a full stepCount notches before finalizing.
+            let jumpStep: Int
             if manualDirection > 0 {
-                initialNotches = fwdNotches
+                jumpStep = Int(fwdNotches)
             } else {
-                initialNotches = fwdNotches == 0 ? 0 : Double(stepCount) - fwdNotches
+                jumpStep = -(stepCount - Int(fwdNotches))
             }
-            manualAccumulatedNotches = initialNotches
-            // Draw the path from the layer's start (step 0) up to the jump position,
-            // so the initial segment is never silently skipped.
-            canvas.updateManualDrawing(toStep: manualDirection * Int(initialNotches))
+            manualJumpStep           = jumpStep
+            manualAccumulatedNotches = 0          // always counts 0 → stepCount from jump
+            canvas.jumpManualStep(to: jumpStep)
         }
         guard manualDirection != 0 else {
+            manualPrevTranslation = value.translation
+            return
+        }
+
+        // Freeze accumulation when the cursor is outside the ring band (> 30 pt beyond
+        // the inner working edge). Without this the max(0,…) clamp on the accumulator
+        // drives it to zero on backward jitter, jumping the wheel back to the start.
+        // Also skip the first frame after re-entering (prevRadius outside) so the
+        // large outside→inside angle swing is not counted as drawing movement.
+        let cursorRadius = hypot(Double(vb.x), Double(vb.y))
+        let prevRadius   = hypot(Double(va.x), Double(va.y))
+        let ringEdge     = Double(ring.innerRadius) + 30
+        if cursorRadius > ringEdge || prevRadius > ringEdge {
             manualPrevTranslation = value.translation
             return
         }
@@ -417,7 +433,10 @@ struct ContentView: View {
         manualAccumulatedNotches = max(0, min(Double(stepCount),
                                               manualAccumulatedNotches + deltaNotches))
         let rawStep = Int(manualAccumulatedNotches)
-        let step = manualDirection * rawStep
+        // Absolute step: start at jumpStep and advance by rawStep in the chosen direction.
+        // This ensures the user always draws exactly stepCount notches regardless of where
+        // they start, fixing the instant-finalize bug when starting CCW near 12 o'clock.
+        let step = manualJumpStep + manualDirection * rawStep
         // updateManualDrawing sets manualWheelAngle = ring.angleIncrement * step.
         // The wheel-center orbital angle thereby advances at exactly the same angular
         // rate as the finger, keeping the gear body in sync with the cursor.
@@ -442,6 +461,7 @@ struct ContentView: View {
         manualPrevTranslation    = .zero
         manualAccumulatedNotches = 0
         manualDirection          = 0
+        manualJumpStep           = 0
     }
 }
 
