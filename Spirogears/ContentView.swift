@@ -428,10 +428,6 @@ struct ContentView: View {
         // The wheel-center orbital angle thereby advances at exactly the same angular
         // rate as the finger, keeping the gear body in sync with the cursor.
         canvas.updateManualDrawing(toStep: step)
-
-        if rawStep >= stepCount {
-            finalizeManualDrawing()
-        }
         manualPrevTranslation = value.translation
     }
 
