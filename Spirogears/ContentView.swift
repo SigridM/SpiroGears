@@ -30,6 +30,10 @@ struct ContentView: View {
     @State private var manualPrevTranslation: CGSize    = .zero
     @State private var manualAccumulatedNotches: Double = 0
     @State private var manualDirection: Int             = 0  // +1 CW, -1 CCW, 0 not yet set
+    // Size of the drag-capture view (same coordinate system as GearOverlayView).
+    // canvas.size may differ because its GeometryReader is inside a view that has
+    // .ignoresSafeArea() applied externally, which can give a different height.
+    @State private var dragViewSize: CGSize             = .zero
 
     @State private var showingDrawingMenu = false
     @State private var showingConfig = false
@@ -77,6 +81,13 @@ struct ContentView: View {
                 Color.clear
                     .contentShape(Rectangle())
                     .ignoresSafeArea()
+                    .background(
+                        GeometryReader { geo in
+                            Color.clear
+                                .onAppear { dragViewSize = geo.size }
+                                .onChange(of: geo.size) { _, s in dragViewSize = s }
+                        }
+                    )
                     .gesture(
                         DragGesture(minimumDistance: 0)
                             .onChanged { handleManualDrag($0) }
@@ -310,7 +321,11 @@ struct ContentView: View {
     private func handleManualDrag(_ value: DragGesture.Value) {
         guard let layer = canvas.manualLayer else { return }
         let ring = layer.stationaryGuide
-        let cs   = canvas.size
+        // Use the drag view's own measured size so the ring center is computed in the
+        // same coordinate system as GearOverlayView (both have .ignoresSafeArea()
+        // applied directly). canvas.size may differ because it is set by a GeometryReader
+        // inside SpiroCanvasView, whose .ignoresSafeArea() is applied externally.
+        let cs = dragViewSize.width > 0 ? dragViewSize : canvas.size
 
         // Ring center in view coordinates (matches GearOverlayView geometry).
         let ringCenter = CGPoint(x: cs.width  / 2 + layer.offset.x,
@@ -325,14 +340,14 @@ struct ContentView: View {
         let va = CGPoint(x: prev.x - ringCenter.x, y: prev.y - ringCenter.y)
         let vb = CGPoint(x: curr.x - ringCenter.x, y: curr.y - ringCenter.y)
 
-        // Skip degenerate vectors (finger right on the center, or no movement).
+        // Skip degenerate vectors (finger right on center, or no movement).
         guard hypot(Double(va.x), Double(va.y)) > 1,
               hypot(Double(vb.x), Double(vb.y)) > 1 else {
             manualPrevTranslation = value.translation
             return
         }
 
-        // Signed angle from va to vb around the ring center (positive = clockwise).
+        // Signed angle from va to vb (positive = CW in screen coordinates).
         let cross = Double(va.x * vb.y - va.y * vb.x)
         let dot   = Double(va.x * vb.x + va.y * vb.y)
         let deltaAngle = atan2(cross, dot)  // radians
@@ -340,21 +355,51 @@ struct ContentView: View {
         // Lock in direction from the first significant movement.
         if manualDirection == 0 && abs(deltaAngle) > 0.01 {
             manualDirection = deltaAngle > 0 ? 1 : -1
+
+            // Seed accumulated notches so the wheel snaps to the cursor's current
+            // angular position instead of always starting at 12 o'clock (step 0).
+            // Cursor angle relative to ring center → convert to a fractional step.
+            let cursorRad = atan2(Double(curr.y - ringCenter.y), Double(curr.x - ringCenter.x))
+            // thetaDeg(step) = angleIncrement*step + originalAngle - 90
+            // Invert: step = (cursorDeg - originalAngle + 90) / angleIncrement
+            let cursorDeg = cursorRad * 180 / .pi
+            let angleInc  = ring.angleIncrement          // degrees per step
+            let startFrac = (cursorDeg - ring.originalAngle + 90) / angleInc
+            let stepCount = layer.stepCount
+            // Wrap startFrac into [0, stepCount).
+            let fwdNotches = ((startFrac.truncatingRemainder(dividingBy: Double(stepCount)))
+                              + Double(stepCount))
+                             .truncatingRemainder(dividingBy: Double(stepCount))
+            // CW direction: start at fwdNotches (gear advances to cursor position).
+            // CCW direction: start at stepCount - fwdNotches, because CCW steps count
+            //   down from stepCount toward 0, and the orbital angle goes backward.
+            //   (stepCount - fwdNotches) % stepCount handles the 12 o'clock edge case.
+            let initialNotches: Double
+            if manualDirection > 0 {
+                initialNotches = fwdNotches
+            } else {
+                initialNotches = fwdNotches == 0 ? 0 : Double(stepCount) - fwdNotches
+            }
+            manualAccumulatedNotches = initialNotches
+            canvas.jumpManualStep(to: manualDirection * Int(initialNotches))
         }
         guard manualDirection != 0 else {
             manualPrevTranslation = value.translation
             return
         }
 
-        // Accumulate magnitude; apply the locked direction when computing the step.
-        // Clamp at stepCount — the pen is back at the starting point there and
-        // further dragging would just retrace the same path.
-        let deltaNotches = abs(deltaAngle * Double(ring.innerNotchCircumference) / (2 * .pi))
-        manualAccumulatedNotches += deltaNotches
         let stepCount = layer.stepCount
+        let deltaNotches = deltaAngle * Double(ring.innerNotchCircumference) / (2 * .pi)
+                         * Double(manualDirection)
+        manualAccumulatedNotches = max(0, min(Double(stepCount),
+                                              manualAccumulatedNotches + deltaNotches))
         let rawStep = Int(manualAccumulatedNotches)
-        let step = manualDirection * min(rawStep, stepCount)
+        let step = manualDirection * rawStep
+        // updateManualDrawing sets manualWheelAngle = ring.angleIncrement * step.
+        // The wheel-center orbital angle thereby advances at exactly the same angular
+        // rate as the finger, keeping the gear body in sync with the cursor.
         canvas.updateManualDrawing(toStep: step)
+
         if rawStep >= stepCount {
             finalizeManualDrawing()
         }
