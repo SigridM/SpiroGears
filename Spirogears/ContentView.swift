@@ -381,7 +381,9 @@ struct ContentView: View {
                 initialNotches = fwdNotches == 0 ? 0 : Double(stepCount) - fwdNotches
             }
             manualAccumulatedNotches = initialNotches
-            canvas.jumpManualStep(to: manualDirection * Int(initialNotches))
+            // Draw the path from the layer's start (step 0) up to the jump position,
+            // so the initial segment is never silently skipped.
+            canvas.updateManualDrawing(toStep: manualDirection * Int(initialNotches))
         }
         guard manualDirection != 0 else {
             manualPrevTranslation = value.translation

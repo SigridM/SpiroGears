@@ -245,15 +245,6 @@ class SpiroCanvas: ObservableObject {
         manualWheelAngle = layer.stationaryGuide.angleIncrement * Double(step)
     }
 
-    // Teleport the drawing start-point to `step` without stroking any path.
-    // Called once when direction is first locked so the wheel snaps to the
-    // cursor's angular position before any strokes are committed.
-    func jumpManualStep(to step: Int) {
-        guard isManualDrawing, let layer = manualLayer else { return }
-        manualLastStep   = step
-        manualWheelAngle = layer.stationaryGuide.angleIncrement * Double(step)
-    }
-
     // Merge the manual overlay into the persistent canvas. Returns the layer if any
     // strokes were drawn, nil if the user lifted without dragging.
     func endManualDrawing() -> SpiroLayer? {
