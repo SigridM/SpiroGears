@@ -99,7 +99,9 @@ struct GearOverlayView: View {
         }
 
         // Holes drawn without shadow so they read as inset depressions
-        drawHoles(for: wheel, wheelCenter: wc, spinRad: spinRad, context: &context)
+        drawHoles(for: wheel, wheelCenter: wc, spinRad: spinRad,
+                  selectedHole: wheel.storedHoleNumber,
+                  penColor: Color(uiColor: layer.penColor), context: &context)
     }
 
     // MARK: - Holes
@@ -109,7 +111,8 @@ struct GearOverlayView: View {
     private let holeAngularStep: Double = 30 * .pi / 180
 
     private func drawHoles(for wheel: SpiroWheel, wheelCenter: CGPoint,
-                            spinRad: Double, context: inout GraphicsContext) {
+                            spinRad: Double, selectedHole: Int, penColor: Color,
+                            context: inout GraphicsContext) {
         let holeR   = CGFloat(3)
         // notchCount / 2 - invisibleHolesToEdge matches physical Spirograph hole counts:
         // 24→5, 36→11, 63→24, 64→25, 80→33
@@ -131,7 +134,9 @@ struct GearOverlayView: View {
             let holePath = Path(ellipseIn: CGRect(x: hc.x - holeR, y: hc.y - holeR,
                                                   width: holeR * 2, height: holeR * 2))
 
-            context.fill(holePath, with: .color(holeFill))
+            // The selected hole is filled with the layer's pen color so it's identifiable.
+            let fill = h == selectedHole ? penColor : holeFill
+            context.fill(holePath, with: .color(fill))
             context.stroke(holePath, with: .color(holeStroke), lineWidth: 0.8)
         }
     }

@@ -212,14 +212,29 @@ class SpiroCanvas: ObservableObject {
     // Stroke from the last committed step up to `step`, updating the overlay image.
     // step may be positive (CW) or negative (CCW); the direction is determined by
     // whichever way the caller moves step away from zero.
+    // If the user backs up (|step| < |manualLastStep|), the overlay is cleared and
+    // redrawn from scratch so the retreated portion is visually erased.
     func updateManualDrawing(toStep step: Int) {
-        guard isManualDrawing, let layer = manualLayer, step != manualLastStep else { return }
+        guard isManualDrawing, let layer = manualLayer else { return }
         guard canvasSize.width > 0 else { return }
+
+        let backingUp = abs(step) < abs(manualLastStep)
+        guard step != manualLastStep || backingUp else { return }
 
         let rect   = CGRect(origin: .zero, size: canvasSize)
         let offset = renderOffset
         let size   = renderSize
         let color  = layer.penColor.cgColor
+
+        if backingUp {
+            // Discard the overlay and restart from step 0 so the retreat is erased.
+            manualOverlayImage = nil
+            manualLastStep     = 0
+            if step == 0 {
+                manualWheelAngle = 0
+                return
+            }
+        }
 
         manualOverlayImage = UIGraphicsImageRenderer(size: size).image { ctx in
             manualOverlayImage?.draw(at: .zero)

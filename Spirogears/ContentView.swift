@@ -34,6 +34,9 @@ struct ContentView: View {
     // canvas.size may differ because its GeometryReader is inside a view that has
     // .ignoresSafeArea() applied externally, which can give a different height.
     @State private var dragViewSize: CGSize             = .zero
+    // True only while a finger/stylus is actively on the screen during manual drawing.
+    // Gears are always shown during an active drag; the toggle controls them otherwise.
+    @State private var manualDragActive: Bool           = false
 
     @State private var showingDrawingMenu = false
     @State private var showingConfig = false
@@ -51,7 +54,9 @@ struct ContentView: View {
             SpiroCanvasView(canvas: canvas, scale: $canvasScale, lastScale: $canvasLastScale)
                 .ignoresSafeArea()
 
-            if showGears {
+            // During an active manual drag the gears always show so the user can
+            // see where the wheel is; otherwise the Gears toggle governs visibility.
+            if showGears || manualDragActive {
                 let overlayLayer = canvas.animatingLayer
                                 ?? (canvas.isManualDrawing ? canvas.manualLayer : nil)
                                 ?? currentDrawing?.layers.last
@@ -90,14 +95,29 @@ struct ContentView: View {
                     )
                     .gesture(
                         DragGesture(minimumDistance: 0)
-                            .onChanged { handleManualDrag($0) }
-                            .onEnded   { _ in manualPrevTranslation = .zero }
+                            .onChanged { value in
+                                manualDragActive = true
+                                handleManualDrag(value)
+                            }
+                            .onEnded { _ in
+                                manualPrevTranslation = .zero
+                                manualDragActive      = false
+                            }
+                    )
+                    // Allow pinch-to-zoom while a manual draw is in progress.
+                    .simultaneousGesture(
+                        MagnificationGesture()
+                            .onChanged { value in
+                                canvasScale = max(0.25, canvasLastScale * value)
+                            }
+                            .onEnded { value in
+                                canvasLastScale = max(0.25, canvasLastScale * value)
+                            }
                     )
             }
 
             HStack(spacing: 8) {
                 Toggle("Gears", isOn: $showGears)
-                    .disabled(manualDrawing)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 10)
                     .background(.regularMaterial, in: Capsule())
@@ -274,6 +294,7 @@ struct ContentView: View {
         manualPrevTranslation    = .zero
         manualAccumulatedNotches = 0
         manualDirection          = 0
+        manualDragActive         = false
         currentDrawing = nil
         currentDrawingName = ""
         undoneLayers.removeAll()

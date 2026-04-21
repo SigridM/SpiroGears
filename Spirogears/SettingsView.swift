@@ -29,8 +29,10 @@ struct SettingsView: View {
             Section("Drawing") {
                 Toggle("Manual Drawing", isOn: $manualDrawing)
                     .onChange(of: manualDrawing) { _, on in
-                        // Manual Drawing requires gears visible and animation off
-                        if on { showGears = true; animate = false }
+                        // Manual Drawing is incompatible with animation.
+                        // (Gears are shown automatically during an active drag,
+                        // but the user can toggle them freely otherwise.)
+                        if on { animate = false }
                     }
             }
 
