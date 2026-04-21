@@ -417,8 +417,10 @@ struct ContentView: View {
         let stepCount = layer.stepCount
         let deltaNotches = deltaAngle * Double(ring.innerNotchCircumference) / (2 * .pi)
                          * Double(manualDirection)
-        manualAccumulatedNotches = max(0, min(Double(stepCount),
-                                              manualAccumulatedNotches + deltaNotches))
+        // No upper clamp: beyond stepCount the curve is periodic so extra steps
+        // retrace the same path, but the wheel continues tracking the cursor.
+        // Lower clamp at 0 prevents backing up before the jump point.
+        manualAccumulatedNotches = max(0, manualAccumulatedNotches + deltaNotches)
         let rawStep = Int(manualAccumulatedNotches)
         // Absolute step: start at jumpStep and advance by rawStep in the chosen direction.
         // This ensures the user always draws exactly stepCount notches regardless of where
