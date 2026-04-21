@@ -414,19 +414,6 @@ struct ContentView: View {
             return
         }
 
-        // Freeze accumulation when the cursor is outside the ring band (> 30 pt beyond
-        // the inner working edge). Without this the max(0,…) clamp on the accumulator
-        // drives it to zero on backward jitter, jumping the wheel back to the start.
-        // Also skip the first frame after re-entering (prevRadius outside) so the
-        // large outside→inside angle swing is not counted as drawing movement.
-        let cursorRadius = hypot(Double(vb.x), Double(vb.y))
-        let prevRadius   = hypot(Double(va.x), Double(va.y))
-        let ringEdge     = Double(ring.innerRadius) + 30
-        if cursorRadius > ringEdge || prevRadius > ringEdge {
-            manualPrevTranslation = value.translation
-            return
-        }
-
         let stepCount = layer.stepCount
         let deltaNotches = deltaAngle * Double(ring.innerNotchCircumference) / (2 * .pi)
                          * Double(manualDirection)
