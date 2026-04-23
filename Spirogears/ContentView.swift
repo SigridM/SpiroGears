@@ -38,6 +38,8 @@ struct ContentView: View {
     // True only while a finger/stylus is actively on the screen during manual drawing.
     // Gears are always shown during an active drag; the toggle controls them otherwise.
     @State private var manualDragActive: Bool           = false
+    // True while the cursor is outside the ring during a manual drag.
+    @State private var manualCursorOutside: Bool        = false
 
     @State private var showingDrawingMenu = false
     @State private var showingConfig = false
@@ -69,6 +71,14 @@ struct ContentView: View {
                         .scaleEffect(canvasScale)
                         .ignoresSafeArea()
                 }
+            }
+
+            // Outside-ring indicator: fades in when the cursor exits the ring.
+            if manualCursorOutside, let layer = canvas.manualLayer {
+                OutsideRingOverlayView(layer: layer)
+                    .scaleEffect(canvasScale)
+                    .ignoresSafeArea()
+                    .transition(.opacity)
             }
 
             // Tap-to-skip overlay: captures a single tap anywhere on the canvas
@@ -103,6 +113,7 @@ struct ContentView: View {
                             .onEnded { _ in
                                 manualPrevTranslation = .zero
                                 manualDragActive      = false
+                                withAnimation(.easeOut(duration: 0.2)) { manualCursorOutside = false }
                             }
                     )
                     // Allow pinch-to-zoom while a manual draw is in progress.
@@ -297,6 +308,7 @@ struct ContentView: View {
         manualDirection          = 0
         manualJumpStep           = 0
         manualDragActive         = false
+        manualCursorOutside      = false
         currentDrawing = nil
         currentDrawingName = ""
         undoneLayers.removeAll()
@@ -419,6 +431,11 @@ struct ContentView: View {
         let prevRadius = hypot(Double(va.x), Double(va.y))
         let ringEdge   = Double(ring.innerRadius) + 30
 
+        let isOutside = curRadius > ringEdge
+        if isOutside != manualCursorOutside {
+            withAnimation(.easeInOut(duration: 0.15)) { manualCursorOutside = isOutside }
+        }
+
         if curRadius > ringEdge {
             // Outside the ring: keep the accumulator and wheel in sync with the
             // cursor but skip drawing updates entirely. This prevents incidental
@@ -480,6 +497,7 @@ struct ContentView: View {
         manualAccumulatedNotches = 0
         manualDirection          = 0
         manualJumpStep           = 0
+        manualCursorOutside      = false
     }
 }
 

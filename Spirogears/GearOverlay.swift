@@ -4,6 +4,28 @@ import SwiftUI
 // Draws the stationary ring and the rolling wheel for the given layer.
 // wheelAngle is the wheel-center's angle around the ring center, in degrees from top (0 = top).
 
+// MARK: - Outside-ring cursor indicator
+
+/// Tints the area outside the ring when the cursor exits during manual drawing.
+struct OutsideRingOverlayView: View {
+    let layer: SpiroLayer
+
+    var body: some View {
+        GeometryReader { geo in
+            let center = CGPoint(x: geo.size.width  / 2 + layer.offset.x,
+                                 y: geo.size.height / 2 + layer.offset.y)
+            let r = CGFloat(layer.stationaryGuide.innerRadius)
+            Path { path in
+                path.addRect(CGRect(origin: .zero, size: geo.size))
+                path.addEllipse(in: CGRect(x: center.x - r, y: center.y - r,
+                                           width: r * 2,    height: r * 2))
+            }
+            .fill(Color.orange.opacity(0.20), style: FillStyle(eoFill: true))
+        }
+        .allowsHitTesting(false)
+    }
+}
+
 private let gearFill   = Color.white
 private let gearStroke = Color(white: 0.72)           // gray edge
 private let gearGlow   = Color(white: 0.40).opacity(0.35) // soft gray outer glow for depth
