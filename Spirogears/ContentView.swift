@@ -75,8 +75,7 @@ struct ContentView: View {
 
             // Outside-ring indicator: fades in when the cursor exits the ring.
             if manualCursorOutside, let layer = canvas.manualLayer {
-                OutsideRingOverlayView(layer: layer)
-                    .scaleEffect(canvasScale)
+                OutsideRingOverlayView(layer: layer, scale: canvasScale)
                     .ignoresSafeArea()
                     .transition(.opacity)
             }

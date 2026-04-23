@@ -9,12 +9,15 @@ import SwiftUI
 /// Tints the area outside the ring when the cursor exits during manual drawing.
 struct OutsideRingOverlayView: View {
     let layer: SpiroLayer
+    var scale: CGFloat = 1.0
 
     var body: some View {
         GeometryReader { geo in
-            let center = CGPoint(x: geo.size.width  / 2 + layer.offset.x,
-                                 y: geo.size.height / 2 + layer.offset.y)
-            let r = CGFloat(layer.stationaryGuide.innerRadius)
+            // Scale only the ring cutout, not the background fill, so the tint
+            // always covers the full screen regardless of the zoom level.
+            let center = CGPoint(x: geo.size.width  / 2 + layer.offset.x * scale,
+                                 y: geo.size.height / 2 + layer.offset.y * scale)
+            let r = CGFloat(layer.stationaryGuide.innerRadius) * scale
             Path { path in
                 path.addRect(CGRect(origin: .zero, size: geo.size))
                 path.addEllipse(in: CGRect(x: center.x - r, y: center.y - r,
