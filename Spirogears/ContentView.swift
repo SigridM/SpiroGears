@@ -414,22 +414,54 @@ struct ContentView: View {
             return
         }
 
-        let stepCount = layer.stepCount
+        let stepCount  = layer.stepCount
+        let curRadius  = hypot(Double(vb.x), Double(vb.y))
+        let prevRadius = hypot(Double(va.x), Double(va.y))
+        let ringEdge   = Double(ring.innerRadius) + 30
+
+        if curRadius > ringEdge {
+            // Outside the ring: keep the accumulator and wheel in sync with the
+            // cursor but skip drawing updates entirely. This prevents incidental
+            // CCW jitter outside the ring from triggering the backingUp erase.
+            let deltaNotches = deltaAngle * Double(ring.innerNotchCircumference) / (2 * .pi)
+                             * Double(manualDirection)
+            manualAccumulatedNotches += deltaNotches
+            canvas.updateManualWheelOnly(toStep: manualJumpStep + manualDirection * Int(manualAccumulatedNotches))
+            manualPrevTranslation = value.translation
+            return
+        }
+
+        if prevRadius > ringEdge {
+            // Re-entry: cursor just crossed back inside the ring.
+            // Compute the cursor's current position in ring-notch space
+            // (0 ..< ring.innerNotchCircumference). This is the only information
+            // the cursor's angular position can supply — not which revolution.
+            let reRad  = atan2(Double(vb.y), Double(vb.x))
+            let reDeg  = reRad * 180 / .pi
+            let reFrac = (reDeg - ring.originalAngle + 90) / ring.angleIncrement
+            let ringN  = ring.innerNotchCircumference
+            let reFwd  = Int(((reFrac.truncatingRemainder(dividingBy: Double(ringN)))
+                              + Double(ringN))
+                             .truncatingRemainder(dividingBy: Double(ringN)))
+            // Always advance in the drawing direction from the last-drawn ring
+            // position to the cursor's ring position. Never retreat — if the cursor
+            // comes back slightly behind the exit point, forwardDelta is nearly
+            // ringN (one full ring sweep forward) rather than a tiny retreat.
+            let lastRingPos  = ((canvas.manualLastStep % ringN) + ringN) % ringN
+            let forwardDelta = ((reFwd - lastRingPos) * manualDirection + ringN) % ringN
+            let reStep       = canvas.manualLastStep + manualDirection * forwardDelta
+            // Snap the accumulator so inside-ring drawing continues without jitter.
+            manualAccumulatedNotches = Double(manualDirection * (reStep - manualJumpStep))
+            canvas.resumeManualDrawing(atStep: reStep)
+            manualPrevTranslation = value.translation
+            return
+        }
+
+        // Normal inside-ring drawing.
         let deltaNotches = deltaAngle * Double(ring.innerNotchCircumference) / (2 * .pi)
                          * Double(manualDirection)
-        // No clamping: the wheel must track the cursor continuously in both
-        // directions. Any clamp snaps the wheel to a fixed step while the cursor
-        // keeps moving, causing cumulative desync each time the cursor swings
-        // backward (which happens naturally when going outside the ring).
         manualAccumulatedNotches += deltaNotches
-        let rawStep = Int(manualAccumulatedNotches)
-        // Absolute step: start at jumpStep and advance by rawStep in the chosen direction.
-        // This ensures the user always draws exactly stepCount notches regardless of where
-        // they start, fixing the instant-finalize bug when starting CCW near 12 o'clock.
-        let step = manualJumpStep + manualDirection * rawStep
-        // updateManualDrawing sets manualWheelAngle = ring.angleIncrement * step.
-        // The wheel-center orbital angle thereby advances at exactly the same angular
-        // rate as the finger, keeping the gear body in sync with the cursor.
+        let step = manualJumpStep + manualDirection * Int(manualAccumulatedNotches)
         canvas.updateManualDrawing(toStep: step)
         manualPrevTranslation = value.translation
     }

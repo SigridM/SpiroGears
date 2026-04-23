@@ -19,7 +19,7 @@ class SpiroCanvas: ObservableObject {
     @Published private(set) var manualOverlayImage: UIImage?
     @Published private(set) var manualWheelAngle: Double = 0
     @Published private(set) var manualLayer: SpiroLayer?
-    private var manualLastStep: Int = 0
+    private(set) var manualLastStep: Int = 0
     private var manualJumpStep: Int = 0   // absolute step at which drawing started (set by jumpManualStep)
 
     private var animationTask: Task<Void, Never>?
@@ -221,6 +221,10 @@ class SpiroCanvas: ObservableObject {
         guard canvasSize.width > 0 else { return }
 
         let backingUp = abs(step) < abs(manualLastStep)
+        // Absorb tiny retreats (≤ 3 notches): these are Int() truncation artefacts
+        // or first-frame CCW jitter after re-entering the ring, not a genuine
+        // direction reversal. Silently discard rather than triggering an erase.
+        if backingUp && abs(manualLastStep) - abs(step) <= 3 { return }
         guard step != manualLastStep || backingUp else { return }
 
         let rect   = CGRect(origin: .zero, size: canvasSize)
@@ -229,17 +233,20 @@ class SpiroCanvas: ObservableObject {
         let color  = layer.penColor.cgColor
 
         if backingUp {
-            // Discard the overlay and restart from the jump point so the retreat is erased.
-            manualOverlayImage = nil
-            manualLastStep     = manualJumpStep
+            // Restart from the jump point so the retreat is erased.
+            // Keep a reference to the old image so we can replace it atomically
+            // (no intermediate nil assignment that would flash a blank frame).
+            manualLastStep = manualJumpStep
             if step == manualJumpStep {
+                manualOverlayImage = nil
                 manualWheelAngle = layer.stationaryGuide.angleIncrement * Double(manualJumpStep)
                 return
             }
         }
 
+        let baseImage = backingUp ? nil : manualOverlayImage
         manualOverlayImage = UIGraphicsImageRenderer(size: size).image { ctx in
-            manualOverlayImage?.draw(at: .zero)
+            baseImage?.draw(at: .zero)
             ctx.cgContext.saveGState()
             ctx.cgContext.translateBy(x: offset.x, y: offset.y)
             ctx.cgContext.setStrokeColor(color)
@@ -260,6 +267,28 @@ class SpiroCanvas: ObservableObject {
 
         manualLastStep   = step
         manualWheelAngle = layer.stationaryGuide.angleIncrement * Double(step)
+    }
+
+    // Update only the wheel angle without touching the drawing overlay.
+    // Used while the cursor is outside the ring to give visual feedback
+    // without triggering drawing or backingUp logic.
+    func updateManualWheelOnly(toStep step: Int) {
+        guard isManualDrawing, let layer = manualLayer else { return }
+        manualWheelAngle = layer.stationaryGuide.angleIncrement * Double(step)
+    }
+
+    // Called on ring re-entry. If the cursor advanced while outside, extends
+    // the drawing forward normally. If the cursor backed up while outside,
+    // repositions the drawing cursor without erasing the overlay — subsequent
+    // forward strokes will composite over the existing path at those steps.
+    func resumeManualDrawing(atStep step: Int) {
+        guard isManualDrawing, let layer = manualLayer else { return }
+        if abs(step) >= abs(manualLastStep) {
+            updateManualDrawing(toStep: step)
+        } else {
+            manualLastStep   = step
+            manualWheelAngle = layer.stationaryGuide.angleIncrement * Double(step)
+        }
     }
 
     // Silently reposition the drawing start-point to `step` without stroking.
