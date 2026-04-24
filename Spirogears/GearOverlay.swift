@@ -41,12 +41,24 @@ struct GearOverlayView: View {
     var wheelAngle: Double = 0
 
     var body: some View {
-        Canvas { context, size in
-            let center = CGPoint(x: size.width  / 2 + layer.offset.x,
-                                 y: size.height / 2 + layer.offset.y)
-            drawRing(layer.stationaryGuide, center: center, context: &context)
-            drawWheel(layer.penGuide, around: layer.stationaryGuide,
-                      center: center, angle: wheelAngle, context: &context)
+        // Use a GeometryReader so we know the screen size, then render the Canvas at
+        // 2× that size (centered on screen).  This matches SpiroCanvas's oversized
+        // image approach: content that extends beyond the screen edge is rendered
+        // rather than clipped, so pinching out reveals the full ring and wheel.
+        GeometryReader { geo in
+            Canvas { context, size in
+                // size is 2× screen.  size.width/2 == screenWidth, so the ring
+                // center at (screenCenter + offset) lands at
+                // (screenWidth + offset.x, screenHeight + offset.y) — exactly
+                // where SpiroCanvas places it in its own 2× render image.
+                let center = CGPoint(x: size.width  / 2 + layer.offset.x,
+                                     y: size.height / 2 + layer.offset.y)
+                drawRing(layer.stationaryGuide, center: center, context: &context)
+                drawWheel(layer.penGuide, around: layer.stationaryGuide,
+                          center: center, angle: wheelAngle, context: &context)
+            }
+            .frame(width: geo.size.width * 2, height: geo.size.height * 2)
+            .position(x: geo.size.width / 2, y: geo.size.height / 2)
         }
         .allowsHitTesting(false)
     }
