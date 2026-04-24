@@ -105,9 +105,9 @@ struct GearOverlayView: View {
         let depth  = CGFloat(wheel.notchSize * 2 / .pi)
 
         let spinDeg = angle * (1.0 - ratio) + originDeg
-        // Even-tooth wheels need a half-tooth phase offset so a wheel tooth aligns
-        // with each ring gap at the contact point; odd-tooth counts are correct as-is.
-        let toothPhaseOffset = count % 2 == 0 ? Double.pi / Double(count) : 0.0
+        // With outward ring notches, even-tooth wheels mesh correctly with no offset.
+        // Odd-tooth wheels land half a tooth out of phase and need a -π/count correction.
+        let toothPhaseOffset = count % 2 != 0 ? -Double.pi / Double(count) : 0.0
         let spinRad = (spinDeg - 90) * .pi / 180 + toothPhaseOffset
                       - Double(wheel.storedHoleNumber - 1) * holeAngularStep
 
@@ -171,12 +171,12 @@ struct GearOverlayView: View {
 
     // MARK: - Path generation
 
-    /// Cut-out path for the ring's inner hole. Teeth dip inward (rootRadius = innerRadius,
-    /// tipRadius = innerRadius - toothDepth), so the ring body gains inward teeth after the cut.
+    /// Cut-out path for the ring's inner hole. Notches go outward (tipRadius = innerRadius +
+    /// toothDepth) so they are cut into the ring band, matching the outward wheel teeth.
     private func innerCutPath(center: CGPoint, innerRadius: CGFloat,
                                notchCount: Int, toothDepth: CGFloat) -> Path {
         toothPath(center: center, rootRadius: innerRadius,
-                  tipRadius: innerRadius - toothDepth,
+                  tipRadius: innerRadius + toothDepth,
                   notchCount: notchCount, startAngle: -.pi / 2, clockwise: false)
     }
 
