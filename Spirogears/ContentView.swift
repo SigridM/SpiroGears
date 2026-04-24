@@ -441,7 +441,7 @@ struct ContentView: View {
             // CCW jitter outside the ring from triggering the backingUp erase.
             let deltaNotches = deltaAngle * Double(ring.innerNotchCircumference) / (2 * .pi)
                              * Double(manualDirection)
-            manualAccumulatedNotches += deltaNotches
+            manualAccumulatedNotches = min(manualAccumulatedNotches + deltaNotches, Double(stepCount))
             canvas.updateManualWheelOnly(toStep: manualJumpStep + manualDirection * Int(manualAccumulatedNotches))
             manualPrevTranslation = value.translation
             return
@@ -467,7 +467,9 @@ struct ContentView: View {
             let forwardDelta = ((reFwd - lastRingPos) * manualDirection + ringN) % ringN
             let reStep       = canvas.manualLastStep + manualDirection * forwardDelta
             // Snap the accumulator so inside-ring drawing continues without jitter.
-            manualAccumulatedNotches = Double(manualDirection * (reStep - manualJumpStep))
+            // Cap at stepCount so re-entry can't advance past one full cycle.
+            manualAccumulatedNotches = min(Double(manualDirection * (reStep - manualJumpStep)),
+                                           Double(stepCount))
             canvas.resumeManualDrawing(atStep: reStep)
             manualPrevTranslation = value.translation
             return
@@ -476,7 +478,9 @@ struct ContentView: View {
         // Normal inside-ring drawing.
         let deltaNotches = deltaAngle * Double(ring.innerNotchCircumference) / (2 * .pi)
                          * Double(manualDirection)
-        manualAccumulatedNotches += deltaNotches
+        // Cap at stepCount: the wheel stops advancing once it completes a full cycle.
+        // Backward motion (erasing) is unrestricted — the accumulator can decrease freely.
+        manualAccumulatedNotches = min(manualAccumulatedNotches + deltaNotches, Double(stepCount))
         let step = manualJumpStep + manualDirection * Int(manualAccumulatedNotches)
         canvas.updateManualDrawing(toStep: step)
         manualPrevTranslation = value.translation
