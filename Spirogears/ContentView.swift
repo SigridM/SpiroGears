@@ -21,6 +21,7 @@ struct ContentView: View {
     @AppStorage("animate")        private var animate        = false
     @AppStorage("animationSpeed") private var animationSpeed = AnimationSpeed.medium
     @AppStorage("manualDrawing")  private var manualDrawing  = false
+    @AppStorage("haptics")        private var haptics        = true
 
     // Zoom state lifted from SpiroCanvasView so GearOverlayView can share the same scale
     @State private var canvasScale: CGFloat = 1.0
@@ -189,7 +190,8 @@ struct ContentView: View {
                 }
             }
         }
-        .task { savedDrawingNames = SpiroDrawing.savedDrawingNames }
+        .task { savedDrawingNames = SpiroDrawing.savedDrawingNames; canvas.hapticsEnabled = haptics }
+        .onChange(of: haptics) { _, value in canvas.hapticsEnabled = value }
         .alert("Save Drawing", isPresented: $showingSaveAlert) {
             TextField("Name", text: $saveNameInput)
             Button("Save") { confirmSave() }

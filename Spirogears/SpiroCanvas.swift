@@ -2,6 +2,26 @@ import Combine
 import SwiftUI
 import UIKit
 
+// MARK: - Haptic engine (throttled to 30 Hz, reuses one generator)
+
+@MainActor
+private final class HapticEngine {
+    private let generator = UIImpactFeedbackGenerator(style: .light)
+    private var lastFireTime: CFTimeInterval = 0
+    private let minInterval: CFTimeInterval = 1.0 / 30.0
+
+    func prepare() {
+        generator.prepare()
+    }
+
+    func fire() {
+        let now = CACurrentMediaTime()
+        guard now - lastFireTime >= minInterval else { return }
+        generator.impactOccurred()
+        lastFireTime = now
+    }
+}
+
 // MARK: - Observable canvas (Option B: accumulates layers as a UIImage)
 // Renders into a 2× oversized canvas so drawings that extend beyond the screen
 // are fully captured. The view displays this at 0.5× by default (filling the screen)
@@ -21,6 +41,9 @@ class SpiroCanvas: ObservableObject {
     @Published private(set) var manualLayer: SpiroLayer?
     private(set) var manualLastStep: Int = 0
     private var manualJumpStep: Int = 0   // absolute step at which drawing started (set by jumpManualStep)
+
+    var hapticsEnabled = false
+    private let hapticEngine = HapticEngine()
 
     private var animationTask: Task<Void, Never>?
     private var pendingDrawing: SpiroDrawing?
@@ -60,6 +83,7 @@ class SpiroCanvas: ObservableObject {
         isAnimating     = true
         animationWheelAngle    = 0
         animationOverlayImage  = nil
+        if hapticsEnabled { hapticEngine.prepare() }
 
         animationTask = Task { @MainActor in
             await runAnimation(for: layer, pointsPerFrame: pointsPerFrame)
@@ -82,6 +106,7 @@ class SpiroCanvas: ObservableObject {
         isAnimating     = true
         animationWheelAngle   = 0
         animationOverlayImage = nil
+        if hapticsEnabled { hapticEngine.prepare() }
 
         animationTask = Task { @MainActor in
             for layer in layers {
@@ -141,6 +166,7 @@ class SpiroCanvas: ObservableObject {
             animationOverlayImage  = overlayImage
             animationWheelAngle    = layer.stationaryGuide.angleIncrement * Double(batchEnd)
             i = batchEnd
+            if hapticsEnabled { hapticEngine.fire() }
             await Task.yield()
         }
 
@@ -221,6 +247,7 @@ class SpiroCanvas: ObservableObject {
         manualWheelAngle   = 0
         manualOverlayImage = nil
         isManualDrawing    = true
+        if hapticsEnabled { hapticEngine.prepare() }
     }
 
     // Stroke from the last committed step up to `step`, updating the overlay image.
@@ -279,6 +306,7 @@ class SpiroCanvas: ObservableObject {
 
         manualLastStep   = step
         manualWheelAngle = layer.stationaryGuide.angleIncrement * Double(step)
+        if hapticsEnabled { hapticEngine.fire() }
     }
 
     // Update only the wheel angle without touching the drawing overlay.
