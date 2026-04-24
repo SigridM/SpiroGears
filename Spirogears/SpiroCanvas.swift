@@ -98,19 +98,25 @@ class SpiroCanvas: ObservableObject {
 
     // Core per-layer animation loop; can be awaited so layers chain sequentially.
     private func runAnimation(for layer: SpiroLayer, pointsPerFrame: Int) async {
-        let steps  = layer.stepCount
+        let startStep = layer.drawnFrom
+        let endStep   = layer.drawnTo ?? layer.stepCount
+        guard startStep != endStep else { return }
+        let direction = endStep > startStep ? 1 : -1
+
         let rect   = CGRect(origin: .zero, size: canvasSize)
         let offset = renderOffset
         let size   = renderSize
         let color  = layer.penColor.cgColor
 
         var overlayImage: UIImage? = nil
-        var i = 0
+        var i = startStep
 
-        while i < steps {
+        while i != endStep {
             guard !Task.isCancelled else { return }
 
-            let batchEnd = min(i + pointsPerFrame, steps)
+            let remaining = (endStep - i) * direction
+            let batchSize = min(pointsPerFrame, remaining)
+            let batchEnd  = i + direction * batchSize
 
             overlayImage = UIGraphicsImageRenderer(size: size).image { ctx in
                 overlayImage?.draw(at: .zero)
@@ -119,8 +125,14 @@ class SpiroCanvas: ObservableObject {
                 ctx.cgContext.setStrokeColor(color)
                 ctx.cgContext.setLineWidth(1.0)
                 ctx.cgContext.move(to: layer.point(at: i, in: rect))
-                for j in (i + 1)...batchEnd {
-                    ctx.cgContext.addLine(to: layer.point(at: j, in: rect))
+                if direction > 0 {
+                    for j in (i + 1)...batchEnd {
+                        ctx.cgContext.addLine(to: layer.point(at: j, in: rect))
+                    }
+                } else {
+                    for j in stride(from: i - 1, through: batchEnd, by: -1) {
+                        ctx.cgContext.addLine(to: layer.point(at: j, in: rect))
+                    }
                 }
                 ctx.cgContext.strokePath()
                 ctx.cgContext.restoreGState()
@@ -307,7 +319,10 @@ class SpiroCanvas: ObservableObject {
         // Use manualOverlayImage as the "strokes were drawn" signal — jumpManualStep
         // can set manualLastStep != 0 before any strokes, so that's no longer reliable.
         let drawnLayer = manualOverlayImage != nil ? manualLayer : nil
-        if let overlay = manualOverlayImage, drawnLayer != nil {
+        if let overlay = manualOverlayImage, let layer = drawnLayer {
+            // Record the drawn range so redraw/animation replays exactly what was drawn.
+            layer.drawnFrom = manualJumpStep
+            layer.drawnTo   = manualLastStep
             let size = renderSize
             renderedImage = UIGraphicsImageRenderer(size: size).image { ctx in
                 renderedImage?.draw(at: .zero)

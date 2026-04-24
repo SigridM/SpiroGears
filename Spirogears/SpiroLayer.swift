@@ -6,6 +6,11 @@ class SpiroLayer {
     var stationaryGuide: SpiroRing
     var offset: CGPoint
 
+    // The step range actually drawn. drawnFrom defaults to 0; drawnTo defaults to
+    // nil, which means the full stepCount. Manual drawing sets both at finalization.
+    var drawnFrom: Int = 0
+    var drawnTo: Int? = nil
+
     init(penColor: UIColor = .black,
          penGuide: SpiroWheel,
          stationaryGuide: SpiroRing,
@@ -39,14 +44,20 @@ class SpiroLayer {
         )
     }
 
-    // Port of drawLayerOn: — returns a path instead of drawing directly to a widget
+    // Port of drawLayerOn: — returns a path instead of drawing directly to a widget.
+    // Respects drawnFrom/drawnTo so partial manual drawings redraw correctly.
     func path(in rect: CGRect) -> UIBezierPath {
-        let steps = stepCount
-        guard steps > 0 else { return UIBezierPath() }
+        let from = drawnFrom
+        let to   = drawnTo ?? stepCount
+        guard from != to else { return UIBezierPath() }
         let path = UIBezierPath()
-        path.move(to: point(at: 0, in: rect))
-        for i in 1...steps {
-            path.addLine(to: point(at: i, in: rect))
+        path.move(to: point(at: from, in: rect))
+        if to > from {
+            for i in (from + 1)...to { path.addLine(to: point(at: i, in: rect)) }
+        } else {
+            for i in stride(from: from - 1, through: to, by: -1) {
+                path.addLine(to: point(at: i, in: rect))
+            }
         }
         return path
     }
