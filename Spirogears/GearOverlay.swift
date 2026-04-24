@@ -105,7 +105,10 @@ struct GearOverlayView: View {
         let depth  = CGFloat(wheel.notchSize * 2 / .pi)
 
         let spinDeg = angle * (1.0 - ratio) + originDeg
-        let spinRad = (spinDeg - 90) * .pi / 180
+        // Even-tooth wheels need a half-tooth phase offset so a wheel tooth aligns
+        // with each ring gap at the contact point; odd-tooth counts are correct as-is.
+        let toothPhaseOffset = count % 2 == 0 ? Double.pi / Double(count) : 0.0
+        let spinRad = (spinDeg - 90) * .pi / 180 + toothPhaseOffset
                       - Double(wheel.storedHoleNumber - 1) * holeAngularStep
 
         let path = toothPath(center: wc, rootRadius: outerR, tipRadius: outerR + depth,
