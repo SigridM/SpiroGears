@@ -180,29 +180,34 @@ struct GearOverlayView: View {
                   notchCount: notchCount, startAngle: -.pi / 2, clockwise: false)
     }
 
-    /// General gear-tooth path. Alternates arcs at rootRadius (gaps) with triangular teeth.
+    /// General gear-tooth path. Alternates arcs at rootRadius (gaps) with teeth that have
+    /// a small arc at the tip so peaks are blunted to match the rounded valleys.
     private func toothPath(center: CGPoint, rootRadius: CGFloat, tipRadius: CGFloat,
                             notchCount: Int, startAngle: Double, clockwise: Bool) -> Path {
-        var path    = Path()
-        let arc     = 2.0 * Double.pi / Double(notchCount)
-        let gap     = 0.35   // fraction of arc that is gap, split half/half around each tooth
-        let dir     = clockwise ? -1.0 : 1.0
+        var path      = Path()
+        let arc       = 2.0 * Double.pi / Double(notchCount)
+        let gap       = 0.35   // fraction of arc that is gap, split half/half around each tooth
+        let bluntHalf = arc * 0.08  // half-width of the blunted tip arc
+        let dir       = clockwise ? -1.0 : 1.0
 
         for i in 0..<notchCount {
             let base       = startAngle + dir * Double(i) * arc
             let toothStart = base + dir * arc * gap / 2
             let toothEnd   = base + dir * arc * (1 - gap / 2)
             let nextBase   = base + dir * arc
+            let tipStart   = (toothStart + toothEnd) / 2 - dir * bluntHalf
+            let tipEnd     = (toothStart + toothEnd) / 2 + dir * bluntHalf
 
             if i == 0 { path.move(to: polar(center, rootRadius, base)) }
 
             path.addArc(center: center, radius: rootRadius,
-                        startAngle: .radians(base),       endAngle: .radians(toothStart), clockwise: clockwise)
-            let toothMid = (toothStart + toothEnd) / 2
-            path.addLine(to: polar(center, tipRadius,  toothMid))   // rising flank → peak
+                        startAngle: .radians(base),      endAngle: .radians(toothStart), clockwise: clockwise)
+            path.addLine(to: polar(center, tipRadius, tipStart))    // rising flank
+            path.addArc(center: center, radius: tipRadius,
+                        startAngle: .radians(tipStart),  endAngle: .radians(tipEnd),      clockwise: clockwise)
             path.addLine(to: polar(center, rootRadius, toothEnd))   // falling flank
             path.addArc(center: center, radius: rootRadius,
-                        startAngle: .radians(toothEnd),   endAngle: .radians(nextBase),   clockwise: clockwise)
+                        startAngle: .radians(toothEnd),  endAngle: .radians(nextBase),    clockwise: clockwise)
         }
         path.closeSubpath()
         return path
