@@ -14,7 +14,7 @@ class SpiroLayer {
     init(penColor: UIColor = .black,
          penGuide: SpiroWheel,
          stationaryGuide: SpiroRing,
-         offset: CGPoint = CGPoint(x: 5, y: 5)) {
+         offset: CGPoint = .zero) {
         self.penColor = penColor
         self.penGuide = penGuide
         self.stationaryGuide = stationaryGuide

@@ -8,13 +8,6 @@
 
 ## Pending Tasks - Medium Priority - Bugs
 
-### ⬜ Drawing not centered horizontally
-**Prioirty:** Medium (bug)
-**Status:** Pending
-**Description:** The entire drawing (including the ring, when gears are showing) is not centered left-to-right. It is slightly closer to the right edge of the screen than the left.
-
----
-
 ### ⬜ Start Drawing at Starting Notch (Manual Mode)
 **Priority:** Medium (bug)
 **Status:** Pending
@@ -25,14 +18,14 @@
 ### ⬜ Intermittent failure to stop (Manual Mode)
 **Priority:** Medium (bug)
 **Status:** Pending
-**Description:** There are times when the drawing fails to stop when it reaches the starting point. This may happen when the finger/cursor wanders outside of the ring.
+**Description:** There are times when the drawing fails to stop when it reaches the starting point. This may happen when the finger/cursor wanders outside of the ring. But maybe not. I cannot always replicate this error.
 
 ---
 
 ### ⬜ Inadvertent Drawing Completion during Animation
 **Priority:** Medium (bug)
 **Status:** Pending
-**Description:** When playing back a saved drawing with animation on, any touch on the screen stops the animation and the drawing instantly completes, taking the fun away from watching the animation.
+**Description:** When playing back a saved drawing with animation on, any touch on the screen stops the animation and the drawing instantly completes, taking the fun away from watching the animation. (Perhaps it would be nice to add a "finish now" feature, but it should be more intentional.)
 
 ---
 
@@ -418,5 +411,11 @@ Calling this "Ghost Mode" because it draws thorugh the ring as if it is a ghost.
 - `drawingsCreated` counter persisted via `@AppStorage`; incremented on Draw New and Use as Template
 - Drawing menu items (Add Layer, Undo, Redo, Save) disabled when no drawing is active
 - Settings sheet shows **Manage Subscription** button (→ `apps.apple.com/account/subscriptions`) when subscribed, per App Store guideline §3.1.2
+
+---
+### ✅ Drawing not centered horizontally
+**Prioirty:** Medium (bug)
+**Status:** Completed (2026-04-25)
+**Description:** The entire drawing (including the ring, when gears are showing) is not centered left-to-right. It is slightly closer to the right edge of the screen than the left.
 
 ---
