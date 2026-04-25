@@ -369,7 +369,10 @@ class SpiroCanvas: ObservableObject {
         let drawnLayer = manualOverlayImage != nil ? manualLayer : nil
         if let overlay = manualOverlayImage, let layer = drawnLayer {
             // Record the drawn range so redraw/animation replays exactly what was drawn.
-            layer.drawnFrom = manualJumpStep
+            // drawnFrom is always 0: the catch-up segment (0 → manualJumpStep) is
+            // visually part of this layer and must be included when the layer is
+            // reconstructed by path(in:) during redrawAll (e.g., after undo).
+            layer.drawnFrom = 0
             layer.drawnTo   = manualLastStep
             let size = renderSize
             renderedImage = UIGraphicsImageRenderer(size: size).image { ctx in
