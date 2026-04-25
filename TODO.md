@@ -15,13 +15,6 @@
 
 ---
 
-### ⬜ Inadvertent Drawing Completion (Manual Mode)
-**Priority:** Medium (bug)
-**Status:** Pending
-**Description:** Sometimes a quick "wiggle" (forward and backward movement) in drawing mode, completes the layer, as if the user went all the way around the circle. This may be an effect of "catching up with the finger." Perhaps we need a limit for how far "catching up" is. Let's say if the finger is up to 180-degrees, we catch up with it in a forward direction, and if it's less than 180 degrees, we catch up with it in a backward direction, which means erasing, but if we've just started out, erasing means nothing in a backwards direction, so nothing should happen. So then what should happen if they start dragging when they've started after 180 degrees? I say nothing, for now. Let them figure out that they have to at least touch close to the wheel.
-
----
-
 ### ⬜ Inadvertent Drawing Incompletion after Undo Layer (Manual Mode)
 **Priority:** Medium (bug)
 **Status:** Pending
@@ -439,5 +432,11 @@ Calling this "Ghost Mode" because it draws thorugh the ring as if it is a ghost.
 **Priority:** Medium
 **Status:** Pending
 **Description:** for the chosen hole in the wheel, draw a radial line (perpendicular to the tanget) from the hole to the outer edge. Also draw a line at the ring notch 0 as a reference for the user moving the starting notch.
+
+---
+### ✅ Inadvertent Drawing Completion (Manual Mode)
+**Priority:** Medium (bug)
+**Status:** Completed (2026-04-250)
+**Description:** Sometimes a quick "wiggle" (forward and backward movement) in drawing mode, completes the layer, as if the user went all the way around the circle. This may be an effect of "catching up with the finger." Perhaps we need a limit for how far "catching up" is. Let's say if the finger is up to 180-degrees, we catch up with it in a forward direction, and if it's less than 180 degrees, we catch up with it in a backward direction, which means erasing, but if we've just started out, erasing means nothing in a backwards direction, so nothing should happen. So then what should happen if they start dragging when they've started after 180 degrees? I say nothing, for now. Let them figure out that they have to at least touch close to the wheel.
 
 ---

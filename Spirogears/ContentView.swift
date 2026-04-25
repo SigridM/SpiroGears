@@ -447,18 +447,31 @@ struct ContentView: View {
                 let forwardDelta  = ((cursorRingPos - lastRingPos) * manualDirection + ringN) % ringN
                 jumpStep = lastStep + manualDirection * forwardDelta
             } else {
-                // First touch: snap wheel to cursor, wrapping within [0, stepCount).
+                // First touch: snap wheel to cursor if it is within 180° of the starting
+                // notch in the drawing direction. Beyond 180° the catch-up would draw
+                // nearly a full cycle before the user moves, so stay at 0 instead.
+                //
+                // fwdNotches is the CW distance (in ring-notch units) from the starting
+                // notch to the cursor. The drawing-direction distance is therefore:
+                //   CW:  fwdNotches              (cursor is ahead in CW direction)
+                //   CCW: ringN - fwdNotches       (cursor is ahead in CCW direction)
                 let fwdNotches = ((startFrac.truncatingRemainder(dividingBy: Double(stepCount)))
                                   + Double(stepCount))
                                  .truncatingRemainder(dividingBy: Double(stepCount))
-                // For CW:  jumpStep = +fwdNotches (step advances positively)
-                // For CCW: jumpStep = -(stepCount - fwdNotches), which places the wheel
-                //          at the cursor position (step ≡ fwdNotches mod stepCount) and
-                //          lets the CCW draw cover a full stepCount notches before finalizing.
-                if manualDirection > 0 {
-                    jumpStep = Int(fwdNotches)
+                let fwdInt = Int(fwdNotches)
+                let catchUpDist = manualDirection > 0 ? fwdInt : ringN - fwdInt
+                if catchUpDist <= ringN / 2 {
+                    // For CW:  jumpStep = +fwdNotches (step advances positively)
+                    // For CCW: jumpStep = -(stepCount - fwdNotches), which places the wheel
+                    //          at the cursor position (step ≡ fwdNotches mod stepCount) and
+                    //          lets the CCW draw cover a full stepCount notches before finalizing.
+                    if manualDirection > 0 {
+                        jumpStep = fwdInt
+                    } else {
+                        jumpStep = -(stepCount - fwdInt)
+                    }
                 } else {
-                    jumpStep = -(stepCount - Int(fwdNotches))
+                    jumpStep = 0  // Too far away in drawing direction — start from notch 0.
                 }
             }
             manualJumpStep           = jumpStep
