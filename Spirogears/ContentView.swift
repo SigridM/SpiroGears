@@ -85,15 +85,6 @@ struct ContentView: View {
                     .transition(.opacity)
             }
 
-            // Tap-to-skip overlay: captures a single tap anywhere on the canvas
-            // during animation and completes the drawing instantly.
-            if canvas.isAnimating {
-                Color.clear
-                    .contentShape(Rectangle())
-                    .ignoresSafeArea()
-                    .onTapGesture { canvas.skipAnimation() }
-            }
-
             // Manual drawing drag capture — below the controls so the controls
             // remain tappable. On a real device a recognised DragGesture keeps the
             // touch even when the finger moves over the button area.
@@ -138,6 +129,13 @@ struct ContentView: View {
                     .padding(.vertical, 10)
                     .background(.regularMaterial, in: Capsule())
                     .fixedSize()
+
+                if canvas.isAnimating {
+                    Button("Finish Now") { canvas.skipAnimation() }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
+                        .background(.regularMaterial, in: Capsule())
+                }
 
                 Button("Drawing") {
                     if canvas.isManualDrawing { finalizeManualDrawing() }

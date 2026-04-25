@@ -15,13 +15,6 @@
 
 ---
 
-### ⬜ Inadvertent Drawing Completion during Animation
-**Priority:** Medium (bug)
-**Status:** Pending
-**Description:** When playing back a saved drawing with animation on, any touch on the screen stops the animation and the drawing instantly completes, taking the fun away from watching the animation. (Perhaps it would be nice to add a "finish now" feature, but it should be more intentional.) This actuall happens during manual drawing mode sometimes, too.
-
----
-
 
 ## Pending Tasks – Medium Priority - Features
 
@@ -417,5 +410,14 @@ Calling this "Ghost Mode" because it draws thorugh the ring as if it is a ghost.
 **Priority:** Medium (bug)
 **Status:** Completed (2026-04-25)
 **Description:** All of the keyboards for the settings for a new drawing are numeric except for Starting Notch, which brings up an alpha keyboard. Starting Notch should also be numeric.
+
+---
+
+### ✅ Inadvertent Drawing Completion 
+**Priority:** Medium (bug)
+**Status:** Completed (2026-04-25)
+**Description:** When playing back a saved drawing with animation on, any touch on the screen stops the animation and the drawing instantly completes, taking the fun away from watching the animation. (Perhaps it would be nice to add a "finish now" feature, but it should be more intentional.) This actually happens during manual drawing mode sometimes, too.
+
+**Fix:** Removed the full-screen `Color.clear` tap-to-skip overlay. Added an explicit "Finish Now" button to the top controls bar that appears only while `canvas.isAnimating`, making skip-to-end a deliberate action.
 
 ---
