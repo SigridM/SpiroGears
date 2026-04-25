@@ -18,7 +18,7 @@
 ### ⬜ Inadvertent Drawing Completion during Animation
 **Priority:** Medium (bug)
 **Status:** Pending
-**Description:** When playing back a saved drawing with animation on, any touch on the screen stops the animation and the drawing instantly completes, taking the fun away from watching the animation. (Perhaps it would be nice to add a "finish now" feature, but it should be more intentional.)
+**Description:** When playing back a saved drawing with animation on, any touch on the screen stops the animation and the drawing instantly completes, taking the fun away from watching the animation. (Perhaps it would be nice to add a "finish now" feature, but it should be more intentional.) This actuall happens during manual drawing mode sometimes, too.
 
 ---
 

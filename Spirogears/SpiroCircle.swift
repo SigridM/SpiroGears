@@ -6,7 +6,7 @@ class SpiroCircle: SpiroGuide {
 
     var outerNotchCircumference: Int = 0
     var storedHoleNumber: Int = 1
-    var startingNotch: Int = 0
+    var startingNotch: Int = 1
 
     var outerCircumference: Double { Double(outerNotchCircumference) * notchSize }
     var outerRadius: Double { outerCircumference / (2.0 * Double.pi) }
@@ -14,7 +14,7 @@ class SpiroCircle: SpiroGuide {
         outerNotchCircumference > 0 ? 360.0 / Double(outerNotchCircumference) : 0
     }
     var holeDistance: Double { Self.defaultHoleDistance * notchSize }
-    var originalAngle: Double { angleIncrement * Double(startingNotch) }
+    var originalAngle: Double { angleIncrement * Double(startingNotch - 1) }
     var holeNumber: Int { storedHoleNumber + Self.invisibleHolesToEdge }
 
     // Pen radius: hole 1 sits just inside the tooth root; hole maxHole sits near center.
