@@ -36,10 +36,10 @@ struct SpiroConfigView: View {
                             .multilineTextAlignment(.trailing)
                             .keyboardType(.numberPad)
                     }
-                    // Starting notch can be negative, so use the default keyboard
                     LabeledContent("Starting Notch") {
                         TextField("Notch", value: $data.startingNotch, format: .number)
                             .multilineTextAlignment(.trailing)
+                            .keyboardType(.numberPad)
                     }
                     ColorPicker("Color", selection: $data.color)
                 }

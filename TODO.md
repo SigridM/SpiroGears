@@ -8,13 +8,6 @@
 
 ## Pending Tasks - Medium Priority - Bugs
 
-### ⬜ Start Drawing at Starting Notch (Manual Mode)
-**Priority:** Medium (bug)
-**Status:** Pending
-**Description:** The user sets the starting notch when they begin a drawing or layer. In manual drawing mode, make sure the line starts there, regardless of where the user first puts down their finger. If their finger is not at the starting location, start at the starting location anyway and quickly catch up to their finger.
-
----
-
 ### ⬜ Intermittent failure to stop (Manual Mode)
 **Priority:** Medium (bug)
 **Status:** Pending
@@ -29,12 +22,6 @@
 
 ---
 
-### ⬜ Number pad for Starting Notch
-**Priority:** Medium (bug)
-**Status:** Pending
-**Description:** All of the keyboards for the settings for a new drawing are numeric except for Starting Notch, which brings up an alpha keyboard. Starting Notch should also be numeric.
-
----
 
 ## Pending Tasks – Medium Priority - Features
 
@@ -417,5 +404,18 @@ Calling this "Ghost Mode" because it draws thorugh the ring as if it is a ghost.
 **Prioirty:** Medium (bug)
 **Status:** Completed (2026-04-25)
 **Description:** The entire drawing (including the ring, when gears are showing) is not centered left-to-right. It is slightly closer to the right edge of the screen than the left.
+
+---
+### ✅ Start Drawing at Starting Notch (Manual Mode)
+**Priority:** Medium (bug)
+**Status:** Pending
+**Description:** The user sets the starting notch when they begin a drawing or layer. In manual drawing mode, make sure the line starts there, regardless of where the user first puts down their finger. If their finger is not at the starting location, start at the starting location anyway and quickly catch up to their finger.
+
+---
+
+### ✅ Number pad for Starting Notch
+**Priority:** Medium (bug)
+**Status:** Completed (2026-04-25)
+**Description:** All of the keyboards for the settings for a new drawing are numeric except for Starting Notch, which brings up an alpha keyboard. Starting Notch should also be numeric.
 
 ---
