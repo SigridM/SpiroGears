@@ -11,6 +11,12 @@ class SpiroLayer {
     var drawnFrom: Int = 0
     var drawnTo: Int? = nil
 
+    // Configured loop count (nil = full cycle). One loop = wheelN steps = one
+    // complete rotation of the pen hole around the wheel center. Preserved so
+    // "Use as Template" can restore the configured value even after drawnTo is
+    // overwritten by manual drawing finalization.
+    var loops: Int? = nil
+
     init(penColor: UIColor = .black,
          penGuide: SpiroWheel,
          stationaryGuide: SpiroRing,
@@ -28,6 +34,24 @@ class SpiroLayer {
     // Total number of steps to complete one full cycle.
     var stepCount: Int {
         lcm(stationaryGuide.notchCircumference, penGuide.notchCircumference)
+    }
+
+    // Steps per loop: one full pen-hole orbit brings the drawing back near the start.
+    // One wheel rotation = wheelN steps, but the pen only returns near its starting
+    // direction every 2 wheel rotations (the hole completes a full cycle of the
+    // relative angle), so stepsPerLoop = 2 × wheelN.
+    var stepsPerLoop: Int { 2 * penGuide.outerNotchCircumference }
+
+    // Total loops in a full cycle (ceiling, since stepCount may not be an exact multiple).
+    var totalLoops: Int {
+        let spl = stepsPerLoop
+        return spl > 0 ? Int(ceil(Double(stepCount) / Double(spl))) : 0
+    }
+
+    // Step count to draw: loops × stepsPerLoop if loops is configured, else full stepCount.
+    var effectiveEndStep: Int {
+        guard let n = loops, n > 0 else { return stepCount }
+        return min(n * stepsPerLoop, stepCount)
     }
 
     // Pen position at a given step, in the coordinate space of rect.

@@ -14,7 +14,22 @@ struct SpiroConfigView: View {
         if data.holeNumber < 1       { return "Hole number must be at least 1." }
         let maxHole = max(1, data.wheelNotches / 2 - SpiroCircle.invisibleHolesToEdge)
         if data.holeNumber > maxHole  { return "Hole number must be \(maxHole) or less for a \(data.wheelNotches)-notch wheel." }
+        if let n = data.loops, n < 1 { return "Loops must be at least 1, or blank for a full cycle." }
         return nil
+    }
+
+    // String binding for the optional loops field.
+    private var loopsText: Binding<String> {
+        Binding(
+            get: { data.loops.map { "\($0)" } ?? "" },
+            set: { newValue in
+                if newValue.isEmpty {
+                    data.loops = nil
+                } else if let n = Int(newValue) {
+                    data.loops = n
+                }
+            }
+        )
     }
 
     var body: some View {
@@ -38,6 +53,11 @@ struct SpiroConfigView: View {
                     }
                     LabeledContent("Starting Notch") {
                         TextField("Notch", value: $data.startingNotch, format: .number)
+                            .multilineTextAlignment(.trailing)
+                            .keyboardType(.numberPad)
+                    }
+                    LabeledContent("Loops") {
+                        TextField("Full cycle (\(data.totalLoops))", text: loopsText)
                             .multilineTextAlignment(.trailing)
                             .keyboardType(.numberPad)
                     }

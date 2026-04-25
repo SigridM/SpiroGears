@@ -264,10 +264,10 @@ class SpiroCanvas: ObservableObject {
         guard isManualDrawing, let layer = manualLayer else { return }
         guard canvasSize.width > 0 else { return }
 
-        // Hard limit: the drawing spans exactly one full cycle (stepCount steps from
-        // the starting notch). Clamp here so every caller — normal drag, re-entry,
-        // catch-up — is covered without duplicating logic in ContentView.
-        let limit = layer.stepCount
+        // Hard limit: clamp to the effective end step (loops-based or full stepCount).
+        // Applied here so every caller — normal drag, re-entry, catch-up — is covered
+        // without duplicating logic in ContentView.
+        let limit = layer.effectiveEndStep
         let step  = max(-limit, min(rawStep, limit))
 
         let backingUp = abs(step) < abs(manualLastStep)
@@ -326,7 +326,7 @@ class SpiroCanvas: ObservableObject {
     // without triggering drawing or backingUp logic.
     func updateManualWheelOnly(toStep step: Int) {
         guard isManualDrawing, let layer = manualLayer else { return }
-        let limit = layer.stepCount
+        let limit = layer.effectiveEndStep
         let clampedStep = max(-limit, min(step, limit))
         manualWheelAngle = layer.stationaryGuide.angleIncrement * Double(clampedStep)
     }
@@ -374,6 +374,8 @@ class SpiroCanvas: ObservableObject {
             // reconstructed by path(in:) during redrawAll (e.g., after undo).
             layer.drawnFrom = 0
             layer.drawnTo   = manualLastStep
+            // layer.loops was set at layer creation and is preserved as-is so
+            // "Use as Template" restores the configured loop count.
             let size = renderSize
             renderedImage = UIGraphicsImageRenderer(size: size).image { ctx in
                 renderedImage?.draw(at: .zero)
