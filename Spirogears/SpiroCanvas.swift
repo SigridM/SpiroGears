@@ -41,6 +41,10 @@ class SpiroCanvas: ObservableObject {
     @Published private(set) var manualLayer: SpiroLayer?
     private(set) var manualLastStep: Int = 0
     private var manualJumpStep: Int = 0   // absolute step at which drawing started (set by jumpManualStep)
+    // Snapshot of the overlay after the catch-up segment (0 → jumpStep) was drawn.
+    // Used as the base when backingUp redraws from scratch, so the catch-up is
+    // never accidentally erased by normal backing-up.
+    private var manualCatchUpImage: UIImage? = nil
 
     var hapticsEnabled = false
     private let hapticEngine = HapticEngine()
@@ -246,6 +250,7 @@ class SpiroCanvas: ObservableObject {
         manualJumpStep     = 0
         manualWheelAngle   = 0
         manualOverlayImage = nil
+        manualCatchUpImage = nil
         isManualDrawing    = true
         if hapticsEnabled { hapticEngine.prepare() }
     }
@@ -255,9 +260,15 @@ class SpiroCanvas: ObservableObject {
     // whichever way the caller moves step away from zero.
     // If the user backs up (|step| < |manualLastStep|), the overlay is cleared and
     // redrawn from scratch so the retreated portion is visually erased.
-    func updateManualDrawing(toStep step: Int) {
+    func updateManualDrawing(toStep rawStep: Int) {
         guard isManualDrawing, let layer = manualLayer else { return }
         guard canvasSize.width > 0 else { return }
+
+        // Hard limit: the drawing spans exactly one full cycle (stepCount steps from
+        // the starting notch). Clamp here so every caller — normal drag, re-entry,
+        // catch-up — is covered without duplicating logic in ContentView.
+        let limit = layer.stepCount
+        let step  = max(-limit, min(rawStep, limit))
 
         let backingUp = abs(step) < abs(manualLastStep)
         // Absorb tiny retreats (≤ 3 notches): these are Int() truncation artefacts
@@ -273,17 +284,18 @@ class SpiroCanvas: ObservableObject {
 
         if backingUp {
             // Restart from the jump point so the retreat is erased.
-            // Keep a reference to the old image so we can replace it atomically
-            // (no intermediate nil assignment that would flash a blank frame).
             manualLastStep = manualJumpStep
             if step == manualJumpStep {
-                manualOverlayImage = nil
+                // Fully backed up to the jump point — restore just the catch-up segment.
+                manualOverlayImage = manualCatchUpImage
                 manualWheelAngle = layer.stationaryGuide.angleIncrement * Double(manualJumpStep)
                 return
             }
         }
 
-        let baseImage = backingUp ? nil : manualOverlayImage
+        // When backing up, rebuild on top of the catch-up base so that segment
+        // is never erased by normal backing-up.
+        let baseImage = backingUp ? manualCatchUpImage : manualOverlayImage
         manualOverlayImage = UIGraphicsImageRenderer(size: size).image { ctx in
             baseImage?.draw(at: .zero)
             ctx.cgContext.saveGState()
@@ -331,14 +343,20 @@ class SpiroCanvas: ObservableObject {
         }
     }
 
-    // Silently reposition the drawing start-point to `step` without stroking.
-    // Used when direction is first locked so the wheel snaps to the cursor's
-    // angular position; drawing then begins from that step as the user drags.
+    // Called when drag direction first locks. Strokes the catch-up segment from
+    // the configured starting notch (manualLastStep = 0) to the cursor's current
+    // ring position, so the path always begins at the starting notch regardless
+    // of where the finger first touches. Resets manualJumpStep to `step` so that
+    // subsequent backing-up only erases back to the cursor position, not to 0.
     func jumpManualStep(to step: Int) {
-        guard isManualDrawing, let layer = manualLayer else { return }
-        manualJumpStep   = step
-        manualLastStep   = step
-        manualWheelAngle = layer.stationaryGuide.angleIncrement * Double(step)
+        guard isManualDrawing else { return }
+        if step != manualLastStep {
+            updateManualDrawing(toStep: step)
+        }
+        // Snapshot the overlay now so backing-up always rebuilds on top of the
+        // catch-up segment rather than erasing it.
+        manualCatchUpImage = manualOverlayImage
+        manualJumpStep = step
     }
 
     // Merge the manual overlay into the persistent canvas. Returns the layer if any
@@ -359,6 +377,7 @@ class SpiroCanvas: ObservableObject {
         }
         isManualDrawing    = false
         manualOverlayImage = nil
+        manualCatchUpImage = nil
         manualWheelAngle   = 0
         manualLayer        = nil
         manualLastStep     = 0
@@ -370,6 +389,7 @@ class SpiroCanvas: ObservableObject {
         guard isManualDrawing else { return }
         isManualDrawing    = false
         manualOverlayImage = nil
+        manualCatchUpImage = nil
         manualWheelAngle   = 0
         manualLayer        = nil
         manualLastStep     = 0

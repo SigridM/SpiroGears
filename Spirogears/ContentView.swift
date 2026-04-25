@@ -497,7 +497,7 @@ struct ContentView: View {
             let forwardDelta = ((reFwd - lastRingPos) * manualDirection + ringN) % ringN
             let reStep       = canvas.manualLastStep + manualDirection * forwardDelta
             // Snap the accumulator so inside-ring drawing continues without jitter.
-            // Cap at stepCount so re-entry can't advance past one full cycle.
+            // Cap at Double(stepCount) so re-entry can't advance past one full cycle.
             manualAccumulatedNotches = min(Double(manualDirection * (reStep - manualJumpStep)),
                                            Double(stepCount))
             canvas.resumeManualDrawing(atStep: reStep)
