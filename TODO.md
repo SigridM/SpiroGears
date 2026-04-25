@@ -15,9 +15,7 @@
 
 ---
 
-
 ## Pending Tasks – Medium Priority - Features
-
 
 ### ⬜ Line to edge
 **Priority:** Medium
@@ -419,5 +417,12 @@ Calling this "Ghost Mode" because it draws thorugh the ring as if it is a ghost.
 **Description:** When playing back a saved drawing with animation on, any touch on the screen stops the animation and the drawing instantly completes, taking the fun away from watching the animation. (Perhaps it would be nice to add a "finish now" feature, but it should be more intentional.) This actually happens during manual drawing mode sometimes, too.
 
 **Fix:** Removed the full-screen `Color.clear` tap-to-skip overlay. Added an explicit "Finish Now" button to the top controls bar that appears only while `canvas.isAnimating`, making skip-to-end a deliberate action.
+
+---
+
+### ✅ Catch up to cursor on resume (Manual Mode)
+**Priority:** Medium (bug)
+**Status:** Completed (2026-04-25)
+**Description:** If the user stops part way through a drawing cycle, then clicks within the ring to resume that layer, the wheel should catch up to where they click (drawing anything it needs to between where it is and where the user clicke). Otherwise, the cursor/finger is out of sync with the wheel.
 
 ---

@@ -107,6 +107,7 @@ struct ContentView: View {
                             }
                             .onEnded { _ in
                                 manualPrevTranslation = .zero
+                                manualDirection       = 0   // re-lock direction on next touch so catch-up fires
                                 manualDragActive      = false
                                 withAnimation(.easeOut(duration: 0.2)) { manualCursorOutside = false }
                             }
@@ -429,20 +430,36 @@ struct ContentView: View {
             let angleInc  = ring.angleIncrement          // degrees per step
             let startFrac = (cursorDeg - ring.originalAngle + 90) / angleInc
             let stepCount = layer.stepCount
-            // Wrap startFrac into [0, stepCount).
-            let fwdNotches = ((startFrac.truncatingRemainder(dividingBy: Double(stepCount)))
-                              + Double(stepCount))
-                             .truncatingRemainder(dividingBy: Double(stepCount))
-            // The jump step is the absolute step at which drawing will start.
-            // For CW:  jumpStep = +fwdNotches (step advances positively)
-            // For CCW: jumpStep = -(stepCount - fwdNotches), which places the wheel
-            //          at the cursor position (step ≡ fwdNotches mod stepCount) and
-            //          lets the CCW draw cover a full stepCount notches before finalizing.
+            let ringN     = ring.innerNotchCircumference
+
             let jumpStep: Int
-            if manualDirection > 0 {
-                jumpStep = Int(fwdNotches)
+            let lastStep = canvas.manualLastStep
+            if lastStep != 0 {
+                // Resume mid-draw: advance from the last drawn step to the cursor's
+                // current ring position, drawing the catch-up segment between them.
+                // Uses the same forward-delta formula as ring re-entry so the pen
+                // always advances in the drag direction by the shortest arc, never
+                // jumping backward unexpectedly.
+                let cursorRingPos = Int(((startFrac.truncatingRemainder(dividingBy: Double(ringN)))
+                                         + Double(ringN))
+                                        .truncatingRemainder(dividingBy: Double(ringN)))
+                let lastRingPos   = ((lastStep % ringN) + ringN) % ringN
+                let forwardDelta  = ((cursorRingPos - lastRingPos) * manualDirection + ringN) % ringN
+                jumpStep = lastStep + manualDirection * forwardDelta
             } else {
-                jumpStep = -(stepCount - Int(fwdNotches))
+                // First touch: snap wheel to cursor, wrapping within [0, stepCount).
+                let fwdNotches = ((startFrac.truncatingRemainder(dividingBy: Double(stepCount)))
+                                  + Double(stepCount))
+                                 .truncatingRemainder(dividingBy: Double(stepCount))
+                // For CW:  jumpStep = +fwdNotches (step advances positively)
+                // For CCW: jumpStep = -(stepCount - fwdNotches), which places the wheel
+                //          at the cursor position (step ≡ fwdNotches mod stepCount) and
+                //          lets the CCW draw cover a full stepCount notches before finalizing.
+                if manualDirection > 0 {
+                    jumpStep = Int(fwdNotches)
+                } else {
+                    jumpStep = -(stepCount - Int(fwdNotches))
+                }
             }
             manualJumpStep           = jumpStep
             manualAccumulatedNotches = 0          // always counts 0 → stepCount from jump
