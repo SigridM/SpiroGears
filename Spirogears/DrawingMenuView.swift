@@ -18,19 +18,26 @@ struct DrawingMenuView: View {
 
     let currentDrawing: SpiroDrawing?
     let savedDrawingNames: [String]
+    let hasUndone: Bool
     let onAction: (Action) -> Void
+
+    private var hasLayers: Bool { !(currentDrawing?.layers.isEmpty ?? true) }
 
     var body: some View {
         List {
             Section {
                 Button("Draw New...")  { onAction(.drawNew) }
                 Button("Add Layer...") { onAction(.addLayer) }
+                    .disabled(currentDrawing == nil)
                 Button("Undo Layer")   { onAction(.undoLayer) }
+                    .disabled(!hasLayers)
                 Button("Redo Layer")   { onAction(.redoLayer) }
+                    .disabled(!hasUndone)
                 Button("Save...")      { onAction(.save) }
-                if let drawing = currentDrawing, !drawing.layers.isEmpty {
+                    .disabled(!hasLayers)
+                if hasLayers {
                     NavigationLink("Show Layers") {
-                        LayersView(drawing: drawing, onAction: onAction)
+                        LayersView(drawing: currentDrawing!, onAction: onAction)
                     }
                 }
             }

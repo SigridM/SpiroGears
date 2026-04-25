@@ -9,9 +9,12 @@ import SwiftUI
 
 @main
 struct SpirogearsApp: App {
+    @State private var subscriptionStore = SubscriptionStore()
+
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .environment(subscriptionStore)
         }
     }
 }

@@ -6,8 +6,13 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		053226B72F9CF1C900E13DE1 /* Spirogears.storekit in Resources */ = {isa = PBXBuildFile; fileRef = 053226B62F9CF1C900E13DE1 /* Spirogears.storekit */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		051A5BF02F90E437004676CD /* Spirogears.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Spirogears.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		053226B62F9CF1C900E13DE1 /* Spirogears.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; name = Spirogears.storekit; path = Spirogears/Spirogears.storekit; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -32,6 +37,7 @@
 		051A5BE72F90E437004676CD = {
 			isa = PBXGroup;
 			children = (
+				053226B62F9CF1C900E13DE1 /* Spirogears.storekit */,
 				051A5BF22F90E437004676CD /* Spirogears */,
 				051A5BF12F90E437004676CD /* Products */,
 			);
@@ -109,6 +115,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				053226B72F9CF1C900E13DE1 /* Spirogears.storekit in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

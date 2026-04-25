@@ -29,16 +29,16 @@ struct SettingsView: View {
             Section("Drawing") {
                 Toggle("Manual Drawing", isOn: $manualDrawing)
                     .onChange(of: manualDrawing) { _, on in
-                        // Manual Drawing is incompatible with animation.
-                        // (Gears are shown automatically during an active drag,
-                        // but the user can toggle them freely otherwise.)
                         if on { animate = false }
                     }
             }
 
             Section("Animation") {
                 Toggle("Animate", isOn: $animate)
-                    .disabled(manualDrawing)    // incompatible with Manual Drawing
+                    .disabled(manualDrawing)
+                    .onChange(of: animate) { _, on in
+                        if on { manualDrawing = false }
+                    }
                 Picker("Speed", selection: $animationSpeed) {
                     ForEach(AnimationSpeed.allCases) { speed in
                         Text(speed.label).tag(speed)

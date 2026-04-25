@@ -42,12 +42,16 @@ struct ContentView: View {
     // True while the cursor is outside the ring during a manual drag.
     @State private var manualCursorOutside: Bool        = false
 
+    @Environment(SubscriptionStore.self) private var store
+    @AppStorage("drawingsCreated") private var drawingsCreated = 0
+
     @State private var showingDrawingMenu = false
     @State private var showingConfig = false
     @State private var showingSettings = false
     @State private var showingSaveAlert = false
     @State private var showingSaveBeforeAction = false
     @State private var showingPresetNameError = false
+    @State private var paywallRequest: PaywallRequest? = nil
 
     @State private var saveNameInput = ""
     @State private var savedDrawingNames: [String] = []
@@ -158,7 +162,7 @@ struct ContentView: View {
         }
         .sheet(isPresented: $showingDrawingMenu) {
             NavigationStack {
-                DrawingMenuView(currentDrawing: currentDrawing, savedDrawingNames: savedDrawingNames) { action in
+                DrawingMenuView(currentDrawing: currentDrawing, savedDrawingNames: savedDrawingNames, hasUndone: !undoneLayers.isEmpty) { action in
                     handleMenuAction(action)
                 }
             }
@@ -189,6 +193,10 @@ struct ContentView: View {
                     isModified = true
                 }
             }
+        }
+        .sheet(item: $paywallRequest) { request in
+            PaywallView(feature: request.feature) { paywallRequest = nil }
+                .environment(store)
         }
         .task { savedDrawingNames = SpiroDrawing.savedDrawingNames; canvas.hapticsEnabled = haptics }
         .onChange(of: haptics) { _, value in canvas.hapticsEnabled = value }
@@ -252,12 +260,28 @@ struct ContentView: View {
             default: break
             }
         case .drawNew:
+            if store.entitlement == .free && drawingsCreated >= SubscriptionStore.freeTierDrawingLimit {
+                paywallRequest = PaywallRequest(feature: "More than \(SubscriptionStore.freeTierDrawingLimit) drawings")
+                return
+            }
+            drawingsCreated += 1
             clear()
             currentDrawing = SpiroDrawing()
             showConfigAfterDismiss()
         case .addLayer:
+            if store.entitlement == .free,
+               let drawing = currentDrawing,
+               drawing.layers.count >= SubscriptionStore.freeTierLayerLimit {
+                paywallRequest = PaywallRequest(feature: "More than \(SubscriptionStore.freeTierLayerLimit) layers per drawing")
+                return
+            }
             showConfigAfterDismiss()
         case .useAsTemplate(let data):
+            if store.entitlement == .free && drawingsCreated >= SubscriptionStore.freeTierDrawingLimit {
+                paywallRequest = PaywallRequest(feature: "More than \(SubscriptionStore.freeTierDrawingLimit) drawings")
+                return
+            }
+            drawingsCreated += 1
             clear()
             currentDrawing = SpiroDrawing()
             SpiroDialogData.lastData = data
@@ -335,6 +359,10 @@ struct ContentView: View {
 
     private func saveDrawing() {
         guard currentDrawing != nil else { return }
+        if store.entitlement == .free && savedDrawingNames.count >= SubscriptionStore.freeTierSaveLimit {
+            paywallRequest = PaywallRequest(feature: "More than \(SubscriptionStore.freeTierSaveLimit) saved drawings")
+            return
+        }
         saveNameInput = currentDrawingName
         showingSaveAlert = true
     }
