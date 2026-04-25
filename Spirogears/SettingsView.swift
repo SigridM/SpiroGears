@@ -24,6 +24,8 @@ struct SettingsView: View {
     @AppStorage("manualDrawing")  private var manualDrawing  = false
     @AppStorage("haptics")        private var haptics        = true
 
+    @Environment(SubscriptionStore.self) private var store
+
     var body: some View {
         Form {
             Section("Drawing") {
@@ -49,6 +51,16 @@ struct SettingsView: View {
 
             Section("Feedback") {
                 Toggle("Haptics", isOn: $haptics)
+            }
+
+            if store.entitlement == .subscribed {
+                Section {
+                    Button("Manage Subscription") {
+                        if let url = URL(string: "https://apps.apple.com/account/subscriptions") {
+                            UIApplication.shared.open(url)
+                        }
+                    }
+                }
             }
         }
         .navigationTitle("Settings")
