@@ -17,12 +17,6 @@
 
 ## Pending Tasks – Medium Priority - Features
 
-### ⬜ Line to edge
-**Priority:** Medium
-**Status:** Pending
-**Description:** for the chosen hole in the wheel, draw a radial line (perpendicular to the tanget) from the hole to the outer edge.
-
----
 
 ### ⬜ Ending Notch
 **Priority:** Medium
@@ -424,5 +418,12 @@ Calling this "Ghost Mode" because it draws thorugh the ring as if it is a ghost.
 **Priority:** Medium (bug)
 **Status:** Completed (2026-04-25)
 **Description:** If the user stops part way through a drawing cycle, then clicks within the ring to resume that layer, the wheel should catch up to where they click (drawing anything it needs to between where it is and where the user clicke). Otherwise, the cursor/finger is out of sync with the wheel.
+
+---
+
+### ✅ Line to edge
+**Priority:** Medium
+**Status:** Pending
+**Description:** for the chosen hole in the wheel, draw a radial line (perpendicular to the tanget) from the hole to the outer edge. Also draw a line at the ring notch 0 as a reference for the user moving the starting notch.
 
 ---

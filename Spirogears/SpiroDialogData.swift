@@ -5,7 +5,7 @@ struct SpiroDialogData {
     var wheelNotches: Int = 24
     var color: Color = .black
     var holeNumber: Int = 1
-    var startingNotch: Int = 1
+    var startingNotch: Int = 0
 
     static var lastData = SpiroDialogData()
 

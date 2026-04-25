@@ -92,6 +92,14 @@ struct GearOverlayView: View {
             ctx.stroke(disk, with: .color(gearStroke), lineWidth: 1.5)
             ctx.stroke(cut,  with: .color(gearStroke), lineWidth: 1.5)
         }
+
+        // Reference tick at ring notch 0 (notch 1 = top of ring, angle = -π/2).
+        // Helps the user see where the starting notch is relative to this fixed mark.
+        let notch0Angle: Double = -.pi / 2
+        var tickPath = Path()
+        tickPath.move(to: polar(center, innerR, notch0Angle))
+        tickPath.addLine(to: polar(center, displayOuterR, notch0Angle))
+        context.stroke(tickPath, with: .color(gearStroke), lineWidth: 2)
     }
 
     // MARK: - Wheel
@@ -142,6 +150,55 @@ struct GearOverlayView: View {
         drawHoles(for: wheel, wheelCenter: wc, spinRad: spinRad,
                   selectedHole: wheel.storedHoleNumber,
                   penColor: Color(uiColor: layer.penColor), context: &context)
+
+        // Radial line from the selected hole to the wheel's outer edge.
+        // This gives a clear visual pointer from the pen hole to the rim (perpendicular to tangent).
+        let maxHoleCount = max(1, count / 2 - SpiroCircle.invisibleHolesToEdge)
+        let firstHoleR   = outerR - CGFloat(wheel.notchSize * 2 / .pi)
+        let holeStepR    = firstHoleR / CGFloat(maxHoleCount)
+        let selHoleR     = firstHoleR - CGFloat(wheel.storedHoleNumber - 1) * holeStepR
+        let selHoleAngle = spinRad + Double(wheel.storedHoleNumber - 1) * holeAngularStep
+
+        if selHoleR > 0 {
+            let edgeR = wheelBoundaryRadius(at: selHoleAngle, spinRad: spinRad,
+                                            rootRadius: outerR, tipRadius: outerR + depth,
+                                            notchCount: count)
+            var radialLine = Path()
+            radialLine.move(to: polar(wc, selHoleR, selHoleAngle))
+            radialLine.addLine(to: polar(wc, edgeR, selHoleAngle))
+            context.stroke(radialLine, with: .color(gearStroke), lineWidth: 1.5)
+        }
+    }
+
+    /// Radius of the wheel boundary along a ray at `angle`.
+    /// Mirrors the tooth profile from `toothPath` — gap → rootRadius, tip arc → tipRadius,
+    /// flanks → linearly interpolated — so the line ends exactly at the gear surface.
+    private func wheelBoundaryRadius(at angle: Double, spinRad: Double,
+                                     rootRadius: CGFloat, tipRadius: CGFloat,
+                                     notchCount: Int) -> CGFloat {
+        let arc       = 2.0 * Double.pi / Double(notchCount)
+        let gap       = 0.35
+        let bluntHalf = arc * 0.08
+
+        var rel = (angle - spinRad).truncatingRemainder(dividingBy: arc)
+        if rel < 0 { rel += arc }
+
+        let toothStart = arc * gap / 2
+        let toothEnd   = arc * (1 - gap / 2)
+        let tipStart   = (toothStart + toothEnd) / 2 - bluntHalf
+        let tipEnd     = (toothStart + toothEnd) / 2 + bluntHalf
+
+        if rel <= toothStart || rel >= toothEnd {
+            return rootRadius                                       // gap/valley
+        } else if rel >= tipStart && rel <= tipEnd {
+            return tipRadius                                        // blunted tip
+        } else if rel < tipStart {
+            let t = CGFloat((rel - toothStart) / (tipStart - toothStart))
+            return rootRadius + t * (tipRadius - rootRadius)       // rising flank
+        } else {
+            let t = CGFloat((rel - tipEnd) / (toothEnd - tipEnd))
+            return tipRadius + t * (rootRadius - tipRadius)        // falling flank
+        }
     }
 
     // MARK: - Holes
