@@ -20,6 +20,15 @@
 **Status:** Pending
 **Description:** Sometimes a quick "wiggle" (forward and backward movement) in drawing mode, completes the layer, as if the user went all the way around the circle. This may be an effect of "catching up with the finger." Perhaps we need a limit for how far "catching up" is. Let's say if the finger is up to 180-degrees, we catch up with it in a forward direction, and if it's less than 180 degrees, we catch up with it in a backward direction, which means erasing, but if we've just started out, erasing means nothing in a backwards direction, so nothing should happen. So then what should happen if they start dragging when they've started after 180 degrees? I say nothing, for now. Let them figure out that they have to at least touch close to the wheel.
 
+---
+
+### ⬜ Inadvertent Drawing Incompletion after Undo Layer (Manual Mode)
+**Priority:** Medium (bug)
+**Status:** Pending
+**Description:** If the user chooses "Undo Layer", the previous layer doesn't seem to have saved the arc between the starting notch and the cursor/finger position at the beginning of the drawing, so there's a gap between the starting notch and that original finger position. It's like it's not part of the layer, so if the user undoes a subsequent layer, the previous layers are getting redrawn without those sections.
+
+---
+
 ## Pending Tasks – Medium Priority - Features
 
 
