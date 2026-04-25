@@ -326,7 +326,9 @@ class SpiroCanvas: ObservableObject {
     // without triggering drawing or backingUp logic.
     func updateManualWheelOnly(toStep step: Int) {
         guard isManualDrawing, let layer = manualLayer else { return }
-        manualWheelAngle = layer.stationaryGuide.angleIncrement * Double(step)
+        let limit = layer.stepCount
+        let clampedStep = max(-limit, min(step, limit))
+        manualWheelAngle = layer.stationaryGuide.angleIncrement * Double(clampedStep)
     }
 
     // Called on ring re-entry. If the cursor advanced while outside, extends
