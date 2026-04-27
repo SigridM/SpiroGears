@@ -20,10 +20,10 @@
     [ ] + with a layer icon = for new layer
     [ ] back arrow ↺ with layer icon - for undo layer
     [ ] forward arrow ↻ with layer icon - for redo layer
-    [ ] multiple layers icond - for edit layers
+    [ ] multiple layers icond - for edit layers (submenu)
     [ ] disk icon 💾 - for save
     [ ] cancel icon 🚫 - for clear
-    
+    [ ] some other icon (multiple spirogears drawings?) - for accessing saved and preset drawings (submenu)
 
 ---
 
