@@ -385,7 +385,9 @@ class SpiroCanvas: ObservableObject {
         isManualDrawing    = false
         manualOverlayImage = nil
         manualCatchUpImage = nil
-        manualWheelAngle   = 0
+        // manualWheelAngle is intentionally preserved so the gear overlay can
+        // show the final wheel position instead of snapping back to 0.
+        // It is reset in cancelManualDrawing() and beginManualDrawing().
         manualLayer        = nil
         manualLastStep     = 0
         manualJumpStep     = 0

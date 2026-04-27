@@ -6,6 +6,27 @@
 
 ## Pending Tasks – High Priority
 
+### ⬜ Share Button
+**Priority:** High
+**Status:** Pending
+**Description:** Allow the user to share any drawing with a "share" button (send to Messages, Facebook, etc.). This will improve visibility of the app as word-of-mouth type advertising.\
+
+---
+### ⬜ Replace Drawing menu with palette, bottom of screen
+**Priority:** High
+**Status:** Pending
+**Description:** For new users, it's not obvious how to start. Replace the Drawing menu with a palette across the bottom of the screen. Include icons:
+    [ ] + with a sample drawing - for new drawing
+    [ ] + with a layer icon = for new layer
+    [ ] back arrow ↺ with layer icon - for undo layer
+    [ ] forward arrow ↻ with layer icon - for redo layer
+    [ ] multiple layers icond - for edit layers
+    [ ] disk icon 💾 - for save
+    [ ] cancel icon 🚫 - for clear
+    
+
+---
+
 ## Pending Tasks - Medium Priority - Bugs
 
 ### ⬜ Intermittent failure to stop (Manual Mode)
@@ -17,29 +38,12 @@
 
 ## Pending Tasks – Medium Priority - Features
 
-
-### ⬜ Ending Notch
-**Priority:** Medium
-**Status:** Pending
-**Description:** Give the user a way to specify the ending notch (defaults to the starting notch, meaning, go all the way around). Some of the formulas given for designs in the original spirograph had you start at one notch and end part of the way around to pick up a different color for the next section; e.g., one third of the way around in red, the second third in blue, and the third third in green.
-    In manual mode, if the user stops before the end and clicks on the Drawing menu to create a new layer or save the drawing, choose as the ending notch wherever the wheel stopped.
-
----
-
 ### ⬜ Give Hole/Notch maximum
 **Priority:** Medium
 **Status:** Pending
 **Description:** When a user chooses a wheel size, provide a maximum hole number after the words "Hole Number". Likewise, when a user chooses Inner Ring Notches, provide the maximum wheel notches for that ring size.
 
 ---
-
-### ⬜ Allow Zoom while drawing (animation)
-**Priority:** Medium
-**Status:** Pending
-**Description:** When drawing using animation, allow the user to pinch to zoom during the animation
-
----
-
 
 ### ⬜ Choose Multiple Layers as Template
 **Priority:** Medium
@@ -56,13 +60,6 @@
     [ ] Hide/Show layer (add a "Show Layers" checkbox for which layers are shown so the user can uncheck one or more layers to hide them from the drawing)
     [ ] Rearrange layers (drag them up and down in a list of layers)
     [ ] Delete layer (with undo/redo)
-
----
-
-### ⬜ Share Button
-**Priority:** Medium
-**Status:** Pending
-**Description:** Allow the user to share any drawing with a "share" button (send to Messages, Facebook, etc.)
 
 ---
 
@@ -438,5 +435,20 @@ Calling this "Ghost Mode" because it draws thorugh the ring as if it is a ghost.
 **Priority:** Medium (bug)
 **Status:** Completed (2026-04-250)
 **Description:** If the user chooses "Undo Layer", the previous layer doesn't seem to have saved the arc between the starting notch and the cursor/finger position at the beginning of the drawing, so there's a gap between the starting notch and that original finger position. It's like it's not part of the layer, so if the user undoes a subsequent layer, the previous layers are getting redrawn without those sections.
+
+---
+
+### ✅ Ending Notch - Revised to "Number of Loops
+**Priority:** Medium
+**Status:** Completed (2026-04-27)
+**Description:** Give the user a way to specify the ending notch (defaults to the starting notch, meaning, go all the way around). Some of the formulas given for designs in the original spirograph had you start at one notch and end part of the way around to pick up a different color for the next section; e.g., one third of the way around in red, the second third in blue, and the third third in green. [Actually, this is specified as some number of loops, which turned out to be easeir to program.]
+    In manual mode, if the user stops before the end and clicks on the Drawing menu to create a new layer or save the drawing, choose as the ending notch wherever the wheel stopped.
+
+---
+
+### ✅ Allow Zoom while drawing (animation)
+**Priority:** Medium
+**Status:** Completed (as of 2026-04-27; may have been completed earlier)
+**Description:** When drawing using animation, allow the user to pinch to zoom during the animation
 
 ---

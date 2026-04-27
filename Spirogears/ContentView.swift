@@ -68,9 +68,9 @@ struct ContentView: View {
                 let overlayLayer = canvas.animatingLayer
                                 ?? (canvas.isManualDrawing ? canvas.manualLayer : nil)
                                 ?? currentDrawing?.layers.last
-                let overlayAngle = canvas.isManualDrawing
-                                 ? canvas.manualWheelAngle
-                                 : canvas.animationWheelAngle
+                let overlayAngle = canvas.isAnimating
+                                 ? canvas.animationWheelAngle
+                                 : canvas.manualWheelAngle
                 if let layer = overlayLayer {
                     GearOverlayView(layer: layer, wheelAngle: overlayAngle)
                         .scaleEffect(canvasScale)
@@ -563,6 +563,7 @@ struct ContentView: View {
         manualAccumulatedNotches = 0
         manualDirection          = 0
         manualJumpStep           = 0
+        manualDragActive         = false
         manualCursorOutside      = false
     }
 }
