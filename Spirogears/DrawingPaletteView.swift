@@ -6,6 +6,7 @@ import SwiftUI
 struct DrawingPaletteView: View {
     let currentDrawing: SpiroDrawing?
     let savedDrawingNames: [String]
+    let thumbnails: [String: UIImage]
     let hasUndone: Bool
     let onAction: (DrawingMenuView.Action) -> Void
 
@@ -50,10 +51,14 @@ struct DrawingPaletteView: View {
         }
         .sheet(isPresented: $showingLibrary) {
             NavigationStack {
-                DrawingLibraryView(savedDrawingNames: savedDrawingNames, onAction: { action in
-                    showingLibrary = false
-                    onAction(action)
-                })
+                DrawingLibraryView(
+                    savedDrawingNames: savedDrawingNames,
+                    thumbnails: thumbnails,
+                    onAction: { action in
+                        showingLibrary = false
+                        onAction(action)
+                    }
+                )
             }
             .presentationDetents([.medium, .large])
         }
@@ -113,24 +118,159 @@ private struct PaletteButton: View {
 
 struct DrawingLibraryView: View {
     let savedDrawingNames: [String]
+    let thumbnails: [String: UIImage]
     let onAction: (DrawingMenuView.Action) -> Void
 
+    @State private var viewMode: ViewMode = .list
+    @State private var searchText = ""
+
+    enum ViewMode { case list, grid }
+
+    private static let presets: [(name: String, action: DrawingMenuView.Action)] = [
+        ("Circle",   .drawExample(1)),
+        ("Star",     .drawExample(4)),
+        ("Triangle", .drawExample(5))
+    ]
+
+    private var filteredSaved: [String] {
+        searchText.isEmpty ? savedDrawingNames
+                           : savedDrawingNames.filter { $0.localizedCaseInsensitiveContains(searchText) }
+    }
+
     var body: some View {
-        List {
-            if !savedDrawingNames.isEmpty {
-                Section("Saved Drawings") {
-                    ForEach(savedDrawingNames, id: \.self) { name in
-                        Button(name) { onAction(.drawSaved(name)) }
-                    }
-                }
+        VStack(spacing: 0) {
+            Picker("View", selection: $viewMode) {
+                Image(systemName: "list.bullet").tag(ViewMode.list)
+                Image(systemName: "square.grid.2x2").tag(ViewMode.grid)
             }
-            Section("Preset Drawings") {
-                Button("Circle")   { onAction(.drawExample(1)) }
-                Button("Star")     { onAction(.drawExample(4)) }
-                Button("Triangle") { onAction(.drawExample(5)) }
+            .pickerStyle(.segmented)
+            .padding(.horizontal)
+            .padding(.vertical, 8)
+
+            Divider()
+
+            switch viewMode {
+            case .list: listContent
+            case .grid: gridContent
             }
         }
         .navigationTitle("Library")
         .navigationBarTitleDisplayMode(.inline)
+        .searchable(text: $searchText, prompt: "Search saved drawings")
+    }
+
+    // MARK: List view
+
+    private var listContent: some View {
+        List {
+            if !filteredSaved.isEmpty {
+                Section("Saved Drawings") {
+                    ForEach(filteredSaved, id: \.self) { name in
+                        Button(name) { onAction(.drawSaved(name)) }
+                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                Button(role: .destructive) {
+                                    onAction(.deleteSaved(name))
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                            }
+                    }
+                }
+            }
+            Section("Preset Drawings") {
+                ForEach(Self.presets, id: \.name) { preset in
+                    Button(preset.name) { onAction(preset.action) }
+                }
+            }
+        }
+    }
+
+    // MARK: Grid view
+
+    private var gridContent: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
+                if !filteredSaved.isEmpty {
+                    gridSection(
+                        title: "Saved Drawings",
+                        items: filteredSaved.map { ($0, .drawSaved($0)) },
+                        isDeletable: true
+                    )
+                }
+                gridSection(
+                    title: "Preset Drawings",
+                    items: Self.presets.map { ($0.name, $0.action) },
+                    isDeletable: false
+                )
+            }
+            .padding()
+        }
+    }
+
+    private func gridSection(
+        title: String,
+        items: [(name: String, action: DrawingMenuView.Action)],
+        isDeletable: Bool
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(title)
+                .font(.subheadline)
+                .fontWeight(.semibold)
+                .foregroundStyle(.secondary)
+            LazyVGrid(
+                columns: [GridItem(.adaptive(minimum: 90), spacing: 12)],
+                spacing: 14
+            ) {
+                ForEach(items, id: \.name) { name, action in
+                    thumbnailCell(name: name, action: action, isDeletable: isDeletable)
+                }
+            }
+        }
+    }
+
+    private func thumbnailCell(
+        name: String,
+        action: DrawingMenuView.Action,
+        isDeletable: Bool
+    ) -> some View {
+        Button { onAction(action) } label: {
+            VStack(spacing: 5) {
+                Group {
+                    if let thumb = thumbnails[name] {
+                        Image(uiImage: thumb)
+                            .resizable()
+                            .scaledToFill()
+                    } else {
+                        Color.secondary.opacity(0.15)
+                            .overlay(
+                                Image(systemName: "photo")
+                                    .foregroundStyle(.secondary)
+                            )
+                    }
+                }
+                .frame(width: 90, height: 90)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .strokeBorder(.separator, lineWidth: 0.5)
+                )
+
+                Text(name)
+                    .font(.caption2)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.center)
+                    .frame(width: 90)
+            }
+        }
+        .buttonStyle(.plain)
+        .contextMenu {
+            if isDeletable {
+                Button(role: .destructive) {
+                    onAction(.deleteSaved(name))
+                } label: {
+                    Label("Delete", systemImage: "trash")
+                }
+            }
+        }
     }
 }

@@ -13,6 +13,7 @@ struct DrawingMenuView: View {
         case redoLayer
         case save
         case drawSaved(String)
+        case deleteSaved(String)
         case clear
     }
 

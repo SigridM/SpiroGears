@@ -41,6 +41,74 @@ class SpiroDrawing {
         _savedDrawings[name]
     }
 
+    static func delete(name: String) {
+        _savedDrawings.removeValue(forKey: name)
+        _thumbnails.removeValue(forKey: name)
+    }
+
+    // MARK: - Thumbnails
+
+    private static var _thumbnails: [String: UIImage] = [:]
+
+    /// Renders a drawing into a square thumbnail image, fitting all content.
+    static func generateThumbnail(for drawing: SpiroDrawing, size: CGFloat = 160) -> UIImage {
+        // Use a large square to compute accurate path bounds.
+        let computeSize: CGFloat = 1000
+        let computeRect = CGRect(origin: .zero, size: CGSize(width: computeSize, height: computeSize))
+
+        var contentBounds = CGRect.null
+        for layer in drawing.layers {
+            let b = layer.path(in: computeRect).bounds
+            if !b.isEmpty { contentBounds = contentBounds.union(b) }
+        }
+
+        // Build a square crop region centered on the content with a small padding margin.
+        let cropRect: CGRect
+        if contentBounds.isNull || contentBounds.isEmpty {
+            cropRect = computeRect
+        } else {
+            let padding = max(contentBounds.width, contentBounds.height) * 0.04
+            let padded = contentBounds.insetBy(dx: -padding, dy: -padding)
+            let dim = max(padded.width, padded.height)
+            cropRect = CGRect(x: padded.midX - dim / 2,
+                              y: padded.midY - dim / 2,
+                              width: dim, height: dim)
+        }
+
+        // Render the full drawing into a large UIImage (UIKit handles the coordinate flip).
+        let fullImage = UIGraphicsImageRenderer(size: computeRect.size).image { ctx in
+            UIColor.white.setFill()
+            UIRectFill(computeRect)
+            drawing.draw(in: ctx.cgContext, rect: computeRect)
+        }
+
+        // Draw the full image into the thumbnail rect positioned so cropRect fills the square.
+        let s = size / cropRect.width   // cropRect is square, so width == height
+        let drawRect = CGRect(x: -cropRect.minX * s, y: -cropRect.minY * s,
+                              width: computeSize * s, height: computeSize * s)
+        return UIGraphicsImageRenderer(size: CGSize(width: size, height: size)).image { _ in
+            fullImage.draw(in: drawRect)
+        }
+    }
+
+    static func saveThumbnail(_ thumbnail: UIImage, name: String) {
+        _thumbnails[name] = thumbnail
+    }
+
+    /// Returns cached thumbnails for all saved drawings and presets,
+    /// generating preset thumbnails on first access.
+    static var allThumbnails: [String: UIImage] {
+        let presetMap: [(String, () -> SpiroDrawing)] = [
+            ("Circle",   { .example()  }),
+            ("Star",     { .example4() }),
+            ("Triangle", { .example5() })
+        ]
+        for (name, factory) in presetMap where _thumbnails[name] == nil {
+            _thumbnails[name] = generateThumbnail(for: factory())
+        }
+        return _thumbnails
+    }
+
     // MARK: - Factories
 
     static func example() -> SpiroDrawing {

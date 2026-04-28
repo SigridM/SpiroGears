@@ -56,6 +56,7 @@ struct ContentView: View {
 
     @State private var saveNameInput = ""
     @State private var savedDrawingNames: [String] = []
+    @State private var savedThumbnails: [String: UIImage] = [:]
     @State private var pendingAction: DrawingMenuView.Action? = nil
 
     var body: some View {
@@ -180,6 +181,7 @@ struct ContentView: View {
                 DrawingPaletteView(
                     currentDrawing: currentDrawing,
                     savedDrawingNames: savedDrawingNames,
+                    thumbnails: savedThumbnails,
                     hasUndone: !undoneLayers.isEmpty
                 ) { action in
                     handleMenuAction(action)
@@ -222,7 +224,15 @@ struct ContentView: View {
             PaywallView(feature: request.feature) { paywallRequest = nil }
                 .environment(store)
         }
-        .task { savedDrawingNames = SpiroDrawing.savedDrawingNames; canvas.hapticsEnabled = haptics }
+        .task {
+            savedDrawingNames = SpiroDrawing.savedDrawingNames
+            canvas.hapticsEnabled = haptics
+            // Generate preset thumbnails on a background thread (rendering can be slow for complex drawings).
+            let thumbs = await Task.detached(priority: .userInitiated) {
+                SpiroDrawing.allThumbnails
+            }.value
+            savedThumbnails = thumbs
+        }
         .onChange(of: haptics) { _, value in canvas.hapticsEnabled = value }
         .onChange(of: canvas.isAnimating) { _, animating in if !animating { updateShareImage() } }
         .onChange(of: canvas.isManualDrawing) { _, drawing in if !drawing { updateShareImage() } }
@@ -316,6 +326,10 @@ struct ContentView: View {
         case .redoLayer:   redoLastLayer()
         case .save:        saveDrawing()
         case .drawSaved(let name): loadSavedDrawing(named: name)
+        case .deleteSaved(let name):
+            SpiroDrawing.delete(name: name)
+            savedDrawingNames = SpiroDrawing.savedDrawingNames
+            savedThumbnails = SpiroDrawing.allThumbnails
         case .clear:       clear()
         }
     }
@@ -402,8 +416,11 @@ struct ContentView: View {
             return
         }
         SpiroDrawing.save(drawing, name: saveNameInput)
+        let thumb = SpiroDrawing.generateThumbnail(for: drawing)
+        SpiroDrawing.saveThumbnail(thumb, name: saveNameInput)
         currentDrawingName = saveNameInput
         savedDrawingNames = SpiroDrawing.savedDrawingNames
+        savedThumbnails = SpiroDrawing.allThumbnails
         isModified = false
         runPendingAction()
     }

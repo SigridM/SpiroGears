@@ -10,13 +10,6 @@
 
 ## Pending Tasks – Medium Priority - Features
 
-### ⬜ Long Save List
-**Priority:** Medium
-**Status:** Pending
-**Description:** Figure out what to do if/when the user saves more than a handful of drawings. The "Saved" section of the Library will get too long to be manageable.
-
----
-
 ### ⬜ Choose Multiple Layers as Template
 **Priority:** Medium
 **Status:** Pending
@@ -56,6 +49,15 @@ git commit -m "Add shared Xcode scheme"
 **Description:** Add a "redraw" option so an entire drawing (all the layers) can be redrawn. This will allow a user to draw the same drawing again with animation on or at a different speed. (This is actually already there if the user saves the drawing; it animates when they open a saved drawing.)
 
 ---
+
+### ⬜ Dark Mode
+**Priority:** Low
+**Status:** Pending
+**Description:** Let there be an option to see the drawings against a black background. Question: should the background be part of the drawing? Should it be saved and shared that way?
+
+
+---
+ 
 
 ### ⬜ Out-of-Bounds Drawing Modes (aka "Ghost Mode")
 **Priority:** Low
@@ -485,5 +487,12 @@ Calling this "Ghost Mode" because it draws thorugh the ring as if it is a ghost.
 **Description:** In Manual Drawing mode, drawing stops automatically after the full cycle completes (return to starting notch). If the user keeps their finger down, they can reverse to erase after this point, but if they lift their finger up at this point, they can no longer erase. This is inconsistent with other points in the drawing, where they can lift a finger and then resume at any time. Allow them to reverse to erase even after the cycle is complete and even if they lift a finger at that point.
 
 **Fix:** Removed the auto-finalize call that committed the layer as soon as `manualAccumulatedNotches >= endStep`. The wheel already stops advancing at `endStep` (clamped by `min(..., Double(endStep))`), so the drawing is visually complete, but manual drawing mode stays active. The user can now reverse to erase, lift their finger, and re-touch to resume — exactly like any other point in the drawing. Finalization happens only when the user taps a palette button.
+
+---
+
+### ✅ Long Save List
+**Priority:** Medium
+**Status:** Pending
+**Description:** Figure out what to do if/when the user saves more than a handful of drawings. The "Saved" section of the Library will get too long to be manageable.
 
 ---
