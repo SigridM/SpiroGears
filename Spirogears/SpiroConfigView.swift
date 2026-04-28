@@ -7,12 +7,20 @@ struct SpiroConfigView: View {
     @State var data: SpiroDialogData
     let completion: (SpiroDialogData?) -> Void
 
+    private var maxHole: Int {
+        max(1, data.wheelNotches / 2 - SpiroCircle.invisibleHolesToEdge)
+    }
+
+    private var maxWheelNotches: Int {
+        max(1, data.innerRingNotches - 1)
+    }
+
     // Returns a user-facing message for the first violated constraint, or nil if valid.
     private var validationError: String? {
         if data.innerRingNotches < 1 { return "Inner ring notches must be at least 1." }
         if data.wheelNotches < 1     { return "Wheel notches must be at least 1." }
+        if data.wheelNotches >= data.innerRingNotches { return "Wheel notches must be less than inner ring notches (\(data.innerRingNotches))." }
         if data.holeNumber < 1       { return "Hole number must be at least 1." }
-        let maxHole = max(1, data.wheelNotches / 2 - SpiroCircle.invisibleHolesToEdge)
         if data.holeNumber > maxHole  { return "Hole number must be \(maxHole) or less for a \(data.wheelNotches)-notch wheel." }
         if let n = data.loops, n < 1 { return "Loops must be at least 1, or blank for a full cycle." }
         return nil
@@ -36,30 +44,58 @@ struct SpiroConfigView: View {
         NavigationStack {
             Form {
                 Section {
-                    LabeledContent("Inner Ring Notches") {
+                    LabeledContent {
                         TextField("Notches", value: $data.innerRingNotches, format: .number)
                             .multilineTextAlignment(.trailing)
                             .keyboardType(.numberPad)
+                    } label: {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Inner Ring Notches")
+                            Text("min \(data.wheelNotches + 1)")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
                     }
-                    LabeledContent("Wheel Notches") {
+                    LabeledContent {
                         TextField("Notches", value: $data.wheelNotches, format: .number)
                             .multilineTextAlignment(.trailing)
                             .keyboardType(.numberPad)
+                    } label: {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Wheel Notches")
+                            Text("max \(maxWheelNotches)")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
                     }
-                    LabeledContent("Hole Number") {
+                    LabeledContent {
                         TextField("Hole", value: $data.holeNumber, format: .number)
                             .multilineTextAlignment(.trailing)
                             .keyboardType(.numberPad)
+                    } label: {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Hole Number")
+                            Text("max \(maxHole)")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
                     }
                     LabeledContent("Starting Notch") {
                         TextField("Notch", value: $data.startingNotch, format: .number)
                             .multilineTextAlignment(.trailing)
                             .keyboardType(.numberPad)
                     }
-                    LabeledContent("Loops") {
-                        TextField("Full cycle (\(data.totalLoops))", text: loopsText)
+                    LabeledContent {
+                        TextField("# of loops", text: loopsText)
                             .multilineTextAlignment(.trailing)
                             .keyboardType(.numberPad)
+                    } label: {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Loops")
+                            Text("full cycle: \(data.totalLoops)")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
                     }
                     ColorPicker("Color", selection: $data.color)
                 }

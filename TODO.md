@@ -8,21 +8,29 @@
 
 ## Pending Tasks - Medium Priority - Bugs
 
-### ⬜ Intermittent failure to stop (Manual Mode)
-**Priority:** Medium (bug)
-**Status:** Pending
-**Description:** There are times when the drawing fails to stop when it reaches the starting point. This may happen when the finger/cursor wanders outside of the ring. But maybe not. I cannot always replicate this error.
-
----
-
 ## Pending Tasks – Medium Priority - Features
 
-### ⬜ Give Hole/Notch maximum
+### ⬜ Manual Mode - Gears on at Start of Drawing/Layer
 **Priority:** Medium
 **Status:** Pending
-**Description:** When a user chooses a wheel size, provide a maximum hole number after the words "Hole Number". Likewise, when a user chooses Inner Ring Notches, provide the maximum wheel notches for that ring size, and vice versa. (Until Ghost Mode is in place -- see below -- enforce inner ring notches > wheel notches.) 
+**Description:** In Manual Drawing mode, it doesn't make sense to have the gears be off while drawing. So start every manual mode layer (and new drawing) with gears on; user can turn them back off again at will.
 
 ---
+
+### ⬜ Long Save List
+**Priority:** Medium
+**Status:** Pending
+**Description:** Figure out what to do if/when the user saves more than a handful of drawings. The "Saved" section of the Library will get too long to be manageable.
+
+---
+
+### ⬜ Improve UX for Manual vs. Automatic and Animation
+**Priority:** Medium
+**Status:** Pending
+**Description:** Instead of a toggle for Manual Drawing, put radio buttons "Drawing: Manual / Automatic". Then, *indented under* "Automtic" put the controls for animation (animation on/off, animation speed). This will make it clearer why animation is only available in Automatic drawing mode.
+
+---
+
 
 ### ⬜ Choose Multiple Layers as Template
 **Priority:** Medium
@@ -42,13 +50,6 @@
 
 ---
 
-### ⬜ Redraw
-**Priority:** Medium
-**Status:** Pending
-**Description:** Add a "redraw" option so an entire drawing (all the layers) can be redrawn. This will allow a user to draw the same drawing again with animation on or at a different speed. (This is actually already there if the user saves the drawing; it animates when they open a saved drawing.)
-
----
-
 ## Pending Tasks – Low Priority
 
 ### ⬜ Commit the xcshareddata directory
@@ -61,6 +62,13 @@
 git add Spirogears.xcodeproj/xcshareddata/
 git commit -m "Add shared Xcode scheme"
 ```
+
+---
+
+### ⬜ Redraw
+**Priority:** Low
+**Status:** Pending
+**Description:** Add a "redraw" option so an entire drawing (all the layers) can be redrawn. This will allow a user to draw the same drawing again with animation on or at a different speed. (This is actually already there if the user saves the drawing; it animates when they open a saved drawing.)
 
 ---
 
@@ -145,6 +153,14 @@ Calling this "Ghost Mode" because it draws thorugh the ring as if it is a ghost.
 **Priority:** Low
 **Status:** Pending
 **Description:** Instead of a simple straight line, let the user choose a shape that gets "stamped" at intervals on the path around the wheel. E.g., a circle, triangle, diamond, paisley, etc. These can be given a starting rotation at the top, and then the shape (if not a circle, obviously) would rotate with the angle of the wheel when the stamp is applied. E.g., if a triangle that is originally pointing up at the top, as it moves 5 degrees around the circle, the triangle rotates by 5 degrees, allowing it to still point at the point tangential to the radius at that point.
+---
+
+### ⬜ Intermittent failure to stop (Manual Mode)
+**Priority:** Low (unrepeatable)
+**Status:** Pending
+**Description:** There are times when the drawing fails to stop when it reaches the starting point. This may happen when the finger/cursor wanders outside of the ring. But maybe not. I cannot always replicate this error.
+
+---
 
 # Completed Tasks
 
@@ -453,5 +469,12 @@ Calling this "Ghost Mode" because it draws thorugh the ring as if it is a ghost.
 **Description:** Allow the user to share any drawing with a "share" button (send to Messages, Facebook, etc.). This will improve visibility of the app as word-of-mouth type advertising.
     Put the share button to the upper left of the screen (justified left) at the same level as the Gears toggle.
     Included an attribution under the image to Spirogears.
+
+---
+
+### ✅ Give Hole/Notch maximum
+**Priority:** Medium
+**Status:** Pending
+**Description:** When a user chooses a wheel size, provide a maximum hole number after the words "Hole Number". Likewise, when a user chooses Inner Ring Notches, provide the maximum wheel notches for that ring size, and vice versa. (Until Ghost Mode is in place -- see below -- enforce inner ring notches > wheel notches.) 
 
 ---
