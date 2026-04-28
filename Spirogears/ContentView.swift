@@ -108,7 +108,15 @@ struct ContentView: View {
                             }
                             .onEnded { _ in
                                 manualPrevTranslation = .zero
-                                manualDirection       = 0   // re-lock direction on next touch so catch-up fires
+                                // Re-lock direction on next touch so catch-up fires — UNLESS
+                                // the drawing has reached endStep. In that case, preserve the
+                                // direction so a re-touch followed by backward dragging is
+                                // treated as "back up to erase" rather than triggering a new
+                                // CCW catch-up that draws backward in step space.
+                                let atEnd = canvas.manualLayer.map {
+                                    abs(canvas.manualLastStep) >= $0.effectiveEndStep
+                                } ?? false
+                                if !atEnd { manualDirection = 0 }
                                 manualDragActive      = false
                                 withAnimation(.easeOut(duration: 0.2)) { manualCursorOutside = false }
                             }
@@ -514,9 +522,13 @@ struct ContentView: View {
                     jumpStep = 0  // Too far away in drawing direction — start from notch 0.
                 }
             }
-            manualJumpStep           = jumpStep
-            manualAccumulatedNotches = 0          // always counts 0 → endStep from jump
-            canvas.jumpManualStep(to: jumpStep)
+            // Clamp so re-touching at/past the completion point doesn't produce a
+            // jumpStep beyond endStep, which would make notchCap negative and require
+            // extra backward drag before erasing begins.
+            let clampedJump          = max(-endStep, min(jumpStep, endStep))
+            manualJumpStep           = clampedJump
+            manualAccumulatedNotches = 0
+            canvas.jumpManualStep(to: clampedJump)
         }
         guard manualDirection != 0 else {
             manualPrevTranslation = value.translation
@@ -537,7 +549,8 @@ struct ContentView: View {
             // CCW jitter outside the ring from triggering the backingUp erase.
             let deltaNotches = deltaAngle * Double(ring.innerNotchCircumference) / (2 * .pi)
                              * Double(manualDirection)
-            manualAccumulatedNotches = min(manualAccumulatedNotches + deltaNotches, Double(endStep))
+            let notchCap = Double(endStep) - Double(manualDirection * manualJumpStep)
+            manualAccumulatedNotches = min(manualAccumulatedNotches + deltaNotches, notchCap)
             canvas.updateManualWheelOnly(toStep: manualJumpStep + manualDirection * Int(manualAccumulatedNotches))
             manualPrevTranslation = value.translation
             return
@@ -563,9 +576,10 @@ struct ContentView: View {
             let forwardDelta = ((reFwd - lastRingPos) * manualDirection + ringN) % ringN
             let reStep       = canvas.manualLastStep + manualDirection * forwardDelta
             // Snap the accumulator so inside-ring drawing continues without jitter.
-            // Cap at Double(endStep) so re-entry can't advance past one full cycle.
+            // Cap at notchCap so re-entry can't advance past the end of the drawing.
+            let notchCap = Double(endStep) - Double(manualDirection * manualJumpStep)
             manualAccumulatedNotches = min(Double(manualDirection * (reStep - manualJumpStep)),
-                                           Double(endStep))
+                                           notchCap)
             canvas.resumeManualDrawing(atStep: reStep)
             manualPrevTranslation = value.translation
             return
@@ -574,21 +588,18 @@ struct ContentView: View {
         // Normal inside-ring drawing.
         let deltaNotches = deltaAngle * Double(ring.innerNotchCircumference) / (2 * .pi)
                          * Double(manualDirection)
-        // Cap at endStep: the wheel stops advancing once it completes the configured loops
-        // (or a full cycle when loops is nil). Backward motion is unrestricted.
-        manualAccumulatedNotches = min(manualAccumulatedNotches + deltaNotches, Double(endStep))
+        // Cap so the step doesn't advance past endStep. The correct ceiling for the
+        // accumulator is (endStep - direction*jumpStep), because
+        //   step = jumpStep + direction*accumulated = endStep
+        // when accumulated = endStep - direction*jumpStep. Backward motion is unrestricted.
+        let notchCap = Double(endStep) - Double(manualDirection * manualJumpStep)
+        manualAccumulatedNotches = min(manualAccumulatedNotches + deltaNotches, notchCap)
         let step = manualJumpStep + manualDirection * Int(manualAccumulatedNotches)
         canvas.updateManualDrawing(toStep: step)
         manualPrevTranslation = value.translation
-
-        // Auto-finalize when the configured loop count is reached.
-        if Int(manualAccumulatedNotches) >= endStep {
-            finalizeManualDrawing()
-        }
     }
 
-    // Called when the Drawing button is tapped mid-draw, or when the wheel
-    // completes a full cycle. Commits whatever has been drawn so far.
+    // Called when the Drawing button is tapped mid-draw. Commits whatever has been drawn so far.
     private func finalizeManualDrawing() {
         if let layer = canvas.endManualDrawing() {
             currentDrawing?.addLayer(layer)

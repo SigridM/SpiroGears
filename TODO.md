@@ -10,13 +10,6 @@
 
 ## Pending Tasks – Medium Priority - Features
 
-### ⬜ Manual Mode - Gears on at Start of Drawing/Layer
-**Priority:** Medium
-**Status:** Pending
-**Description:** In Manual Drawing mode, it doesn't make sense to have the gears be off while drawing. So start every manual mode layer (and new drawing) with gears on; user can turn them back off again at will.
-
----
-
 ### ⬜ Long Save List
 **Priority:** Medium
 **Status:** Pending
@@ -476,5 +469,21 @@ Calling this "Ghost Mode" because it draws thorugh the ring as if it is a ghost.
 **Priority:** Medium
 **Status:** Completed (2026-04-28)
 **Description:** Instead of a toggle for Manual Drawing, put radio buttons "Drawing: Manual / Automatic". Then, *indented under* "Automtic" put the controls for animation (animation on/off, animation speed). This will make it clearer why animation is only available in Automatic drawing mode.
+
+---
+
+### ✅ Manual Mode - Gears on at Start of Drawing/Layer
+**Priority:** Medium
+**Status:** Completed (2026-04-28)
+**Description:** In Manual Drawing mode, it doesn't make sense to have the gears be off while drawing. So start every manual mode layer (and new drawing) with gears on; user can turn them back off again at will.
+
+---
+
+### ✅ Manual Drawing - Allow Reverse/Erase After Completion and Cursor/Finger Up
+**Priority:** Medium
+**Status:** Completed (2026-04-28)
+**Description:** In Manual Drawing mode, drawing stops automatically after the full cycle completes (return to starting notch). If the user keeps their finger down, they can reverse to erase after this point, but if they lift their finger up at this point, they can no longer erase. This is inconsistent with other points in the drawing, where they can lift a finger and then resume at any time. Allow them to reverse to erase even after the cycle is complete and even if they lift a finger at that point.
+
+**Fix:** Removed the auto-finalize call that committed the layer as soon as `manualAccumulatedNotches >= endStep`. The wheel already stops advancing at `endStep` (clamped by `min(..., Double(endStep))`), so the drawing is visually complete, but manual drawing mode stays active. The user can now reverse to erase, lift their finger, and re-touch to resume — exactly like any other point in the drawing. Finalization happens only when the user taps a palette button.
 
 ---

@@ -346,19 +346,28 @@ class SpiroCanvas: ObservableObject {
     }
 
     // Called when drag direction first locks. Strokes the catch-up segment from
-    // the configured starting notch (manualLastStep = 0) to the cursor's current
-    // ring position, so the path always begins at the starting notch regardless
-    // of where the finger first touches. Resets manualJumpStep to `step` so that
-    // subsequent backing-up only erases back to the cursor position, not to 0.
+    // the last drawn step to the cursor's current ring position, so the path
+    // always begins at the configured starting notch regardless of where the
+    // finger first touches.
+    //
+    // Only advances manualJumpStep and snapshots manualCatchUpImage when a
+    // catch-up segment is actually drawn. If the cursor lands at the same step
+    // (e.g. re-touching after cycle completion), both are left unchanged so
+    // the backing-up erase still rebuilds from the correct base image.
     func jumpManualStep(to step: Int) {
-        guard isManualDrawing else { return }
-        if step != manualLastStep {
-            updateManualDrawing(toStep: step)
+        guard isManualDrawing, let layer = manualLayer else { return }
+        let limit   = layer.effectiveEndStep
+        let clamped = max(-limit, min(step, limit))
+        if clamped != manualLastStep {
+            updateManualDrawing(toStep: clamped)
+            // Snapshot the overlay after drawing the catch-up so backing-up
+            // rebuilds on top of exactly the catch-up base, not the full drawing.
+            manualCatchUpImage = manualOverlayImage
+            manualJumpStep     = clamped
         }
-        // Snapshot the overlay now so backing-up always rebuilds on top of the
-        // catch-up segment rather than erasing it.
-        manualCatchUpImage = manualOverlayImage
-        manualJumpStep = step
+        // If clamped == manualLastStep there is no catch-up to draw.
+        // Leave manualJumpStep and manualCatchUpImage intact so the erase
+        // base doesn't advance to include the already-drawn path.
     }
 
     // Merge the manual overlay into the persistent canvas. Returns the layer if any
