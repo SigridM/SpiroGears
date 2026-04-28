@@ -191,6 +191,8 @@ struct ContentView: View {
                 let layer = data.makeLayer()
                 undoneLayers.removeAll()
                 if manualDrawing {
+                    // Gears must be visible while drawing manually.
+                    showGears = true
                     // Don't commit to the drawing yet — wait for the drag to finish.
                     canvas.beginManualDrawing(layer: layer)
                     isModified = true
