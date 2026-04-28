@@ -24,14 +24,6 @@
 
 ---
 
-### ⬜ Improve UX for Manual vs. Automatic and Animation
-**Priority:** Medium
-**Status:** Pending
-**Description:** Instead of a toggle for Manual Drawing, put radio buttons "Drawing: Manual / Automatic". Then, *indented under* "Automtic" put the controls for animation (animation on/off, animation speed). This will make it clearer why animation is only available in Automatic drawing mode.
-
----
-
-
 ### ⬜ Choose Multiple Layers as Template
 **Priority:** Medium
 **Status:** Pending
@@ -476,5 +468,13 @@ Calling this "Ghost Mode" because it draws thorugh the ring as if it is a ghost.
 **Priority:** Medium
 **Status:** Pending
 **Description:** When a user chooses a wheel size, provide a maximum hole number after the words "Hole Number". Likewise, when a user chooses Inner Ring Notches, provide the maximum wheel notches for that ring size, and vice versa. (Until Ghost Mode is in place -- see below -- enforce inner ring notches > wheel notches.) 
+
+---
+
+
+### ✅ Improve UX for Manual vs. Automatic and Animation
+**Priority:** Medium
+**Status:** Completed (2026-04-28)
+**Description:** Instead of a toggle for Manual Drawing, put radio buttons "Drawing: Manual / Automatic". Then, *indented under* "Automtic" put the controls for animation (animation on/off, animation speed). This will make it clearer why animation is only available in Automatic drawing mode.
 
 ---

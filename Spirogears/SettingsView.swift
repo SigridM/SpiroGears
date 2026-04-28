@@ -29,24 +29,27 @@ struct SettingsView: View {
     var body: some View {
         Form {
             Section("Drawing") {
-                Toggle("Manual Drawing", isOn: $manualDrawing)
-                    .onChange(of: manualDrawing) { _, on in
-                        if on { animate = false }
-                    }
-            }
-
-            Section("Animation") {
-                Toggle("Animate", isOn: $animate)
-                    .disabled(manualDrawing)
-                    .onChange(of: animate) { _, on in
-                        if on { manualDrawing = false }
-                    }
-                Picker("Speed", selection: $animationSpeed) {
-                    ForEach(AnimationSpeed.allCases) { speed in
-                        Text(speed.label).tag(speed)
-                    }
+                Picker("Drawing", selection: $manualDrawing) {
+                    Text("Manual").tag(true)
+                    Text("Automatic").tag(false)
                 }
-                .disabled(!animate || manualDrawing)
+                .pickerStyle(.inline)
+                .labelsHidden()
+                .onChange(of: manualDrawing) { _, on in
+                    if on { animate = false }
+                }
+
+                if !manualDrawing {
+                    Toggle("Animate", isOn: $animate)
+                        .padding(.leading, 20)
+                    Picker("Speed", selection: $animationSpeed) {
+                        ForEach(AnimationSpeed.allCases) { speed in
+                            Text(speed.label).tag(speed)
+                        }
+                    }
+                    .disabled(!animate)
+                    .padding(.leading, 20)
+                }
             }
 
             Section("Feedback") {
