@@ -12,20 +12,6 @@
 **Description:** Allow the user to share any drawing with a "share" button (send to Messages, Facebook, etc.). This will improve visibility of the app as word-of-mouth type advertising.\
 
 ---
-### ⬜ Replace Drawing menu with palette, bottom of screen
-**Priority:** High
-**Status:** Pending
-**Description:** For new users, it's not obvious how to start. Replace the Drawing menu with a palette across the bottom of the screen. Include icons:
-    [ ] + with a sample drawing - for new drawing
-    [ ] + with a layer icon = for new layer
-    [ ] back arrow ↺ with layer icon - for undo layer
-    [ ] forward arrow ↻ with layer icon - for redo layer
-    [ ] multiple layers icond - for edit layers (submenu)
-    [ ] disk icon 💾 - for save
-    [ ] cancel icon 🚫 - for clear
-    [ ] some other icon (multiple spirogears drawings?) - for accessing saved and preset drawings (submenu)
-
----
 
 ## Pending Tasks - Medium Priority - Bugs
 
@@ -450,5 +436,20 @@ Calling this "Ghost Mode" because it draws thorugh the ring as if it is a ghost.
 **Priority:** Medium
 **Status:** Completed (as of 2026-04-27; may have been completed earlier)
 **Description:** When drawing using animation, allow the user to pinch to zoom during the animation
+
+---
+
+### ✅ Replace Drawing menu with palette, bottom of screen
+**Priority:** High
+**Status:** Pending
+**Description:** For new users, it's not obvious how to start. Replace the Drawing menu with a palette across the bottom of the screen. Include icons:
+    [x] + with a sample drawing - for new drawing
+    [x] + with a layer icon = for new layer
+    [x] back arrow ↺ with layer icon - for undo layer
+    [x] forward arrow ↻ with layer icon - for redo layer
+    [x] multiple layers icond - for edit layers (submenu)
+    [x] disk icon 💾 - for save
+    [x] cancel icon 🚫 - for clear
+    [x] some other icon (multiple spirogears drawings?) - for accessing saved and preset drawings (submenu)
 
 ---

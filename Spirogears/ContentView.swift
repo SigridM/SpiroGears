@@ -45,7 +45,6 @@ struct ContentView: View {
     @Environment(SubscriptionStore.self) private var store
     @AppStorage("drawingsCreated") private var drawingsCreated = 0
 
-    @State private var showingDrawingMenu = false
     @State private var showingConfig = false
     @State private var showingSettings = false
     @State private var showingSaveAlert = false
@@ -58,7 +57,7 @@ struct ContentView: View {
     @State private var pendingAction: DrawingMenuView.Action? = nil
 
     var body: some View {
-        ZStack(alignment: .topTrailing) {
+        ZStack(alignment: .top) {
             SpiroCanvasView(canvas: canvas, scale: $canvasScale, lastScale: $canvasLastScale)
                 .ignoresSafeArea()
 
@@ -124,6 +123,7 @@ struct ContentView: View {
                     )
             }
 
+            // Top controls bar
             HStack(spacing: 8) {
                 Toggle("Gears", isOn: $showGears)
                     .padding(.horizontal, 14)
@@ -138,14 +138,6 @@ struct ContentView: View {
                         .background(.regularMaterial, in: Capsule())
                 }
 
-                Button("Drawing") {
-                    if canvas.isManualDrawing { finalizeManualDrawing() }
-                    showingDrawingMenu = true
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
-                .background(.regularMaterial, in: Capsule())
-
                 Button {
                     if canvas.isManualDrawing { finalizeManualDrawing() }
                     showingSettings = true
@@ -156,16 +148,22 @@ struct ContentView: View {
                 .padding(.vertical, 10)
                 .background(.regularMaterial, in: Capsule())
             }
+            .frame(maxWidth: .infinity, alignment: .trailing)
             .padding(.top, 60)
             .padding(.trailing, 16)
-        }
-        .sheet(isPresented: $showingDrawingMenu) {
-            NavigationStack {
-                DrawingMenuView(currentDrawing: currentDrawing, savedDrawingNames: savedDrawingNames, hasUndone: !undoneLayers.isEmpty) { action in
+
+            // Bottom drawing palette
+            VStack {
+                Spacer()
+                DrawingPaletteView(
+                    currentDrawing: currentDrawing,
+                    savedDrawingNames: savedDrawingNames,
+                    hasUndone: !undoneLayers.isEmpty
+                ) { action in
                     handleMenuAction(action)
                 }
             }
-            .presentationDetents([.large, .medium])
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
         }
         .sheet(isPresented: $showingSettings) {
             NavigationStack { SettingsView() }
@@ -228,7 +226,7 @@ struct ContentView: View {
     // MARK: - Menu action handler
 
     private func handleMenuAction(_ action: DrawingMenuView.Action) {
-        showingDrawingMenu = false
+        if canvas.isManualDrawing { finalizeManualDrawing() }
 
         if shouldPromptToSave(before: action) {
             pendingAction = action
@@ -299,12 +297,8 @@ struct ContentView: View {
         performAction(action)
     }
 
-    // Waits for the drawing menu sheet to finish dismissing before showing config.
     private func showConfigAfterDismiss() {
-        Task { @MainActor in
-            try? await Task.sleep(nanoseconds: 400_000_000)
-            showingConfig = true
-        }
+        showingConfig = true
     }
 
     // MARK: - Actions
