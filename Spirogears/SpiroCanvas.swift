@@ -443,6 +443,59 @@ class SpiroCanvas: ObservableObject {
         cancelManualDrawing()
         renderedImage = nil
     }
+
+    /// Returns the rendered image cropped tightly to the bounding box of the drawing content.
+    /// Falls back to the full rendered image if cropping isn't possible.
+    func exportImage(for drawing: SpiroDrawing) -> UIImage? {
+        guard let image = renderedImage, !drawing.layers.isEmpty else { return renderedImage }
+        let rect = CGRect(origin: .zero, size: canvasSize)
+
+        var contentBounds = CGRect.null
+        for layer in drawing.layers {
+            let b = layer.path(in: rect).bounds
+            if !b.isEmpty { contentBounds = contentBounds.union(b) }
+        }
+        guard !contentBounds.isNull else { return image }
+
+        let offset = renderOffset
+        let padding: CGFloat = 8
+        let imageBounds = contentBounds
+            .offsetBy(dx: offset.x, dy: offset.y)
+            .insetBy(dx: -padding, dy: -padding)
+            .intersection(CGRect(origin: .zero, size: renderSize))
+        guard !imageBounds.isNull, let cgImage = image.cgImage else { return image }
+
+        let scale = image.scale
+        let pixelRect = CGRect(x: imageBounds.minX * scale,
+                               y: imageBounds.minY * scale,
+                               width: imageBounds.width * scale,
+                               height: imageBounds.height * scale)
+        guard let cropped = cgImage.cropping(to: pixelRect) else { return image }
+        let croppedImage = UIImage(cgImage: cropped, scale: scale, orientation: image.imageOrientation)
+        return watermarked(croppedImage)
+    }
+
+    private func watermarked(_ image: UIImage) -> UIImage {
+        let text = "made with Spirogears"
+        let fontSize: CGFloat = max(11, image.size.width * 0.025)
+        let attributes: [NSAttributedString.Key: Any] = [
+            .font: UIFont.italicSystemFont(ofSize: fontSize),
+            .foregroundColor: UIColor.black.withAlphaComponent(0.35)
+        ]
+        let textSize = text.size(withAttributes: attributes)
+        let margin: CGFloat = fontSize * 0.5
+        let stripHeight = textSize.height + margin * 2
+        let totalSize = CGSize(width: image.size.width, height: image.size.height + stripHeight)
+
+        return UIGraphicsImageRenderer(size: totalSize).image { _ in
+            UIColor.white.setFill()
+            UIRectFill(CGRect(origin: .zero, size: totalSize))
+            image.draw(at: .zero)
+            let origin = CGPoint(x: totalSize.width - textSize.width - margin,
+                                 y: image.size.height + margin)
+            text.draw(at: origin, withAttributes: attributes)
+        }
+    }
 }
 
 // MARK: - Canvas view with pinch-to-zoom

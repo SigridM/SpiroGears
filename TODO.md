@@ -6,13 +6,6 @@
 
 ## Pending Tasks – High Priority
 
-### ⬜ Share Button
-**Priority:** High
-**Status:** Pending
-**Description:** Allow the user to share any drawing with a "share" button (send to Messages, Facebook, etc.). This will improve visibility of the app as word-of-mouth type advertising.\
-
----
-
 ## Pending Tasks - Medium Priority - Bugs
 
 ### ⬜ Intermittent failure to stop (Manual Mode)
@@ -27,7 +20,7 @@
 ### ⬜ Give Hole/Notch maximum
 **Priority:** Medium
 **Status:** Pending
-**Description:** When a user chooses a wheel size, provide a maximum hole number after the words "Hole Number". Likewise, when a user chooses Inner Ring Notches, provide the maximum wheel notches for that ring size.
+**Description:** When a user chooses a wheel size, provide a maximum hole number after the words "Hole Number". Likewise, when a user chooses Inner Ring Notches, provide the maximum wheel notches for that ring size, and vice versa. (Until Ghost Mode is in place -- see below -- enforce inner ring notches > wheel notches.) 
 
 ---
 
@@ -441,7 +434,7 @@ Calling this "Ghost Mode" because it draws thorugh the ring as if it is a ghost.
 
 ### ✅ Replace Drawing menu with palette, bottom of screen
 **Priority:** High
-**Status:** Pending
+**Status:** Completed (2026-04-27)
 **Description:** For new users, it's not obvious how to start. Replace the Drawing menu with a palette across the bottom of the screen. Include icons:
     [x] + with a sample drawing - for new drawing
     [x] + with a layer icon = for new layer
@@ -451,5 +444,14 @@ Calling this "Ghost Mode" because it draws thorugh the ring as if it is a ghost.
     [x] disk icon 💾 - for save
     [x] cancel icon 🚫 - for clear
     [x] some other icon (multiple spirogears drawings?) - for accessing saved and preset drawings (submenu)
+
+---
+
+### ✅ Share Button
+**Priority:** High
+**Status:** Completed (2026-04-27
+**Description:** Allow the user to share any drawing with a "share" button (send to Messages, Facebook, etc.). This will improve visibility of the app as word-of-mouth type advertising.
+    Put the share button to the upper left of the screen (justified left) at the same level as the Gears toggle.
+    Included an attribution under the image to Spirogears.
 
 ---

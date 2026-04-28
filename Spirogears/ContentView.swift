@@ -45,6 +45,8 @@ struct ContentView: View {
     @Environment(SubscriptionStore.self) private var store
     @AppStorage("drawingsCreated") private var drawingsCreated = 0
 
+    @State private var shareImage: UIImage?
+    @State private var shareURL: URL?
     @State private var showingConfig = false
     @State private var showingSettings = false
     @State private var showingSaveAlert = false
@@ -124,7 +126,20 @@ struct ContentView: View {
             }
 
             // Top controls bar
-            HStack(spacing: 8) {
+            HStack(alignment: .center) {
+                // Share button — left side
+                if let url = shareURL, let image = shareImage {
+                    ShareLink(item: url, preview: SharePreview("Spirogears Drawing", image: Image(uiImage: image))) {
+                        Image(systemName: "square.and.arrow.up")
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .background(.regularMaterial, in: Capsule())
+                }
+
+                Spacer()
+
+                // Right-side controls
                 Toggle("Gears", isOn: $showGears)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 10)
@@ -148,9 +163,8 @@ struct ContentView: View {
                 .padding(.vertical, 10)
                 .background(.regularMaterial, in: Capsule())
             }
-            .frame(maxWidth: .infinity, alignment: .trailing)
             .padding(.top, 60)
-            .padding(.trailing, 16)
+            .padding(.horizontal, 16)
 
             // Bottom drawing palette
             VStack {
@@ -180,14 +194,17 @@ struct ContentView: View {
                     // Don't commit to the drawing yet — wait for the drag to finish.
                     canvas.beginManualDrawing(layer: layer)
                     isModified = true
+                    // share image updated via onChange(isManualDrawing) at finalization
                 } else if animate {
                     currentDrawing?.addLayer(layer)
                     canvas.animateLayer(layer, pointsPerFrame: animationSpeed.pointsPerFrame)
                     isModified = true
+                    // share image updated via onChange(isAnimating)
                 } else {
                     currentDrawing?.addLayer(layer)
                     canvas.appendLayer(layer)
                     isModified = true
+                    updateShareImage()
                 }
             }
         }
@@ -197,6 +214,8 @@ struct ContentView: View {
         }
         .task { savedDrawingNames = SpiroDrawing.savedDrawingNames; canvas.hapticsEnabled = haptics }
         .onChange(of: haptics) { _, value in canvas.hapticsEnabled = value }
+        .onChange(of: canvas.isAnimating) { _, animating in if !animating { updateShareImage() } }
+        .onChange(of: canvas.isManualDrawing) { _, drawing in if !drawing { updateShareImage() } }
         .alert("Save Drawing", isPresented: $showingSaveAlert) {
             TextField("Name", text: $saveNameInput)
             Button("Save") { confirmSave() }
@@ -308,8 +327,10 @@ struct ContentView: View {
         currentDrawing = drawing
         if animate {
             canvas.animateDrawing(drawing, pointsPerFrame: animationSpeed.pointsPerFrame)
+            // share image updated via onChange(isAnimating)
         } else {
             canvas.redrawAll(drawing: drawing)
+            updateShareImage()
         }
         // isModified stays false — just loaded, nothing changed yet
     }
@@ -331,6 +352,8 @@ struct ContentView: View {
         currentDrawingName = ""
         undoneLayers.removeAll()
         isModified = false
+        shareImage = nil
+        shareURL = nil
         canvas.clear()
     }
 
@@ -340,6 +363,7 @@ struct ContentView: View {
         undoneLayers.append(layer)
         isModified = true
         canvas.redrawAll(drawing: drawing)
+        updateShareImage()
     }
 
     private func redoLastLayer() {
@@ -348,6 +372,7 @@ struct ContentView: View {
         drawing.addLayer(layer)
         isModified = true
         canvas.appendLayer(layer)
+        updateShareImage()
     }
 
     private func saveDrawing() {
@@ -371,6 +396,23 @@ struct ContentView: View {
         savedDrawingNames = SpiroDrawing.savedDrawingNames
         isModified = false
         runPendingAction()
+    }
+
+    private func updateShareImage() {
+        guard let drawing = currentDrawing,
+              let image = canvas.exportImage(for: drawing) ?? canvas.renderedImage else {
+            shareImage = nil
+            shareURL = nil
+            return
+        }
+        shareImage = image
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("Spirogears Drawing.png")
+        if let data = image.pngData(), (try? data.write(to: url)) != nil {
+            shareURL = url
+        } else {
+            shareURL = nil
+        }
     }
 
     // MARK: - Manual Drawing
