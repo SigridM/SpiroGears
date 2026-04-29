@@ -10,13 +10,6 @@
 
 ## Pending Tasks – Medium Priority - Features
 
-### ⬜ New From Template Enhancements
-**Priority:** Low
-**Status:** Pending
-**Description:** When creating a new drawing from a template, keep the configuration of the last layer copied as the default for any new layer or drawing (just as if it was drawn from scratch). Also, enable the "Undo Layer" button (again, just as if the layers were drawn from scratch.)
-
----
-
 ## Pending Tasks – Low Priority
 
 ### ⬜ Redraw
@@ -502,5 +495,12 @@ Calling this "Ghost Mode" because it draws thorugh the ring as if it is a ghost.
 git add Spirogears.xcodeproj/xcshareddata/
 git commit -m "Add shared Xcode scheme"
 ```
+
+---
+
+### ✅ New-From-Template Enhancements
+**Priority:** Low
+**Status:** Completed (2026-04-29)
+**Description:** When creating a new drawing from a template, keep the configuration of the last layer copied as the default for any new layer or drawing (just as if it was drawn from scratch). Also, enable the "Undo Layer" button (again, just as if the layers were drawn from scratch.)
 
 ---

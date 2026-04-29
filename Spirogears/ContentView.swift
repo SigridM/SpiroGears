@@ -354,7 +354,12 @@ struct ContentView: View {
             clear()
             let newDrawing = SpiroDrawing()
             for data in dataArray {
-                newDrawing.addLayer(data.makeLayer())
+                let layer = data.makeLayer()
+                newDrawing.addLayer(layer)
+                undoOps.append(.added(layer))
+            }
+            if let last = dataArray.last {
+                SpiroDialogData.lastData = last
             }
             currentDrawing = newDrawing
             layersSheetContext = nil
