@@ -18,13 +18,21 @@ enum AnimationSpeed: String, CaseIterable, Identifiable {
 // MARK: - Settings form
 
 struct SettingsView: View {
-    @AppStorage("showGears")      private var showGears      = true
-    @AppStorage("animate")        private var animate        = false
-    @AppStorage("animationSpeed") private var animationSpeed = AnimationSpeed.medium
-    @AppStorage("manualDrawing")  private var manualDrawing  = false
-    @AppStorage("haptics")        private var haptics        = true
+    @AppStorage("showGears")             private var showGears             = true
+    @AppStorage("animate")               private var animate               = false
+    @AppStorage("animationSpeed")        private var animationSpeed        = AnimationSpeed.medium
+    @AppStorage("manualDrawing")         private var manualDrawing         = false
+    @AppStorage("haptics")               private var haptics               = true
+    @AppStorage("defaultBackgroundColor") private var defaultBackgroundColorHex: String = "#FFFFFF"
 
     @Environment(SubscriptionStore.self) private var store
+
+    private var defaultBackgroundColorBinding: Binding<Color> {
+        Binding(
+            get: { Color(uiColor: UIColor(hex: defaultBackgroundColorHex) ?? .white) },
+            set: { defaultBackgroundColorHex = UIColor($0).hexString }
+        )
+    }
 
     var body: some View {
         Form {
@@ -54,6 +62,15 @@ struct SettingsView: View {
 
             Section("Feedback") {
                 Toggle("Haptics", isOn: $haptics)
+            }
+
+            Section("Canvas") {
+                HStack {
+                    Text("Default Background Color")
+                    Spacer()
+                    ColorPicker("Default Background Color", selection: defaultBackgroundColorBinding)
+                        .labelsHidden()
+                }
             }
 
             if store.entitlement == .subscribed {

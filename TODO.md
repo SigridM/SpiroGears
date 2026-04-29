@@ -19,15 +19,6 @@
 
 ---
 
-### ⬜ Background Layer
-**Priority:** Low
-**Status:** Pending
-**Description:** Let there be an option to see the drawings against a black background. Keep the background as part of the drawing so it can be saved and shared that way.
-    Suggested impplementation: Create a special case of a layer that is just a solid color: a Background Layer. This layer can only be configurd by color (not by the other configurations for a drawing layer) and cannot be reordered; it must stay as the background. Also create a new setting for "Default Background Color" (which will be factory set at white until the user changes it in their settings). New drawings will use the Default Background Color. Allow the user to change the background color of any drawing when they Show Layers and edit that Background Layer. Only the color of a Background Layer is editable. The Background Layer is part of the drawing and will hence also be part of the shared drawing and part of the thumbnail for saved drawings.
-
----
- 
-
 ### ⬜ Out-of-Bounds Drawing Modes (aka "Ghost Mode")
 **Priority:** Low
 **Status:** Pending
@@ -504,3 +495,13 @@ git commit -m "Add shared Xcode scheme"
 **Description:** When creating a new drawing from a template, keep the configuration of the last layer copied as the default for any new layer or drawing (just as if it was drawn from scratch). Also, enable the "Undo Layer" button (again, just as if the layers were drawn from scratch.)
 
 ---
+
+
+### ✅ Background Layer
+**Priority:** Low
+**Status:** Completed (2026-04-29)
+**Description:** Let there be an option to see the drawings against a black background. Keep the background as part of the drawing so it can be saved and shared that way.
+    Suggested impplementation: Create a special case of a layer that is just a solid color: a Background Layer. This layer can only be configurd by color (not by the other configurations for a drawing layer) and cannot be reordered; it must stay as the background. Also create a new setting for "Default Background Color" (which will be factory set at white until the user changes it in their settings). New drawings will use the Default Background Color. Allow the user to change the background color of any drawing when they Show Layers and edit that Background Layer. Only the color of a Background Layer is editable. The Background Layer is part of the drawing and will hence also be part of the shared drawing and part of the thumbnail for saved drawings.
+
+---
+ 

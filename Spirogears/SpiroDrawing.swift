@@ -1,8 +1,37 @@
 import UIKit
 import SwiftUI
 
+// MARK: - UIColor ↔ hex string helpers
+
+extension UIColor {
+    /// Initialises a fully-opaque colour from a 6-digit hex string like "#FF8800" or "FF8800".
+    convenience init?(hex: String) {
+        var h = hex.trimmingCharacters(in: .whitespaces)
+        if h.hasPrefix("#") { h = String(h.dropFirst()) }
+        guard h.count == 6, let v = UInt64(h, radix: 16) else { return nil }
+        self.init(red:   CGFloat((v >> 16) & 0xFF) / 255,
+                  green: CGFloat((v >>  8) & 0xFF) / 255,
+                  blue:  CGFloat( v        & 0xFF) / 255,
+                  alpha: 1)
+    }
+
+    /// Returns a 6-digit hex string like "#FF8800". Alpha is ignored.
+    var hexString: String {
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        getRed(&r, green: &g, blue: &b, alpha: &a)
+        return String(format: "#%02X%02X%02X",
+                      Int((r * 255).rounded()),
+                      Int((g * 255).rounded()),
+                      Int((b * 255).rounded()))
+    }
+}
+
 class SpiroDrawing {
     var layers: [SpiroLayer] = []
+
+    /// The solid background colour drawn behind all layers.
+    /// Defaults to white; the user can change it per-drawing via Show Layers.
+    var backgroundColor: UIColor = .white
 
     private static var _savedDrawings: [String: SpiroDrawing] = [:]
 
@@ -92,7 +121,7 @@ class SpiroDrawing {
 
         // Render the full drawing into a large UIImage (UIKit handles the coordinate flip).
         let fullImage = UIGraphicsImageRenderer(size: computeRect.size).image { ctx in
-            UIColor.white.setFill()
+            drawing.backgroundColor.setFill()
             UIRectFill(computeRect)
             drawing.draw(in: ctx.cgContext, rect: computeRect)
         }

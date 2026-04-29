@@ -22,6 +22,8 @@ struct DrawingMenuView: View {
         case moveLayer(IndexSet, Int)
         case reconfigureLayer(Int, SpiroDialogData)
         case replaceLayer(Int, SpiroLayer)
+        // Background
+        case updateBackgroundColor(UIColor)
     }
 
     let currentDrawing: SpiroDrawing?
@@ -101,6 +103,18 @@ struct LayersView: View {
 
     @State private var pendingReconfigure: PendingReconfigure? = nil
     @State private var selectedIndices: Set<Int> = []
+    @State private var backgroundColor: Color
+
+    init(drawing: SpiroDrawing, layerVersion: Int, isSubscribed: Bool,
+         onAction: @escaping (DrawingMenuView.Action) -> Void) {
+        self.drawing = drawing
+        self.layerVersion = layerVersion
+        self.isSubscribed = isSubscribed
+        self.onAction = onAction
+        _backgroundColor    = State(initialValue: Color(uiColor: drawing.backgroundColor))
+        _pendingReconfigure = State(initialValue: nil)
+        _selectedIndices    = State(initialValue: [])
+    }
 
     // Snapshot taken while `drawing` is guaranteed alive (body evaluation time).
     // The resulting array is pure value types — no SpiroLayer class references.
@@ -133,6 +147,15 @@ struct LayersView: View {
 
     var body: some View {
         List {
+            Section("Background") {
+                HStack {
+                    Text("Color")
+                    Spacer()
+                    ColorPicker("Background Color", selection: $backgroundColor)
+                        .labelsHidden()
+                }
+            }
+
             ForEach(layerInfos) { info in
                 LayerRow(
                     number:           info.number,
@@ -162,6 +185,9 @@ struct LayersView: View {
             .onMove(perform: isSubscribed ? { source, destination in
                 onAction(.moveLayer(source, destination))
             } : nil)
+        }
+        .onChange(of: backgroundColor) { _, newColor in
+            onAction(.updateBackgroundColor(UIColor(newColor)))
         }
         .navigationTitle("Layers")
         .navigationBarTitleDisplayMode(.inline)

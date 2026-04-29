@@ -35,6 +35,11 @@ class SpiroCanvas: ObservableObject {
     @Published private(set) var animationWheelAngle: Double = 0
     @Published private(set) var animatingLayer: SpiroLayer?
 
+    /// The solid colour rendered behind all drawing layers.
+    /// Set by ContentView whenever a drawing is created or loaded.
+    /// Reset to white when the canvas is cleared.
+    @Published var drawingBackgroundColor: UIColor = .white
+
     @Published private(set) var isManualDrawing = false
     @Published private(set) var manualOverlayImage: UIImage?
     @Published private(set) var manualWheelAngle: Double = 0
@@ -177,8 +182,15 @@ class SpiroCanvas: ObservableObject {
         guard !Task.isCancelled else { return }
         // Merge this layer's overlay into the persistent canvas image.
         let finalOverlay = overlayImage
+        let bgColor = drawingBackgroundColor
         renderedImage = UIGraphicsImageRenderer(size: size).image { ctx in
-            renderedImage?.draw(at: .zero)
+            if let existing = renderedImage {
+                existing.draw(at: .zero)
+            } else {
+                // First layer — paint the background before the overlay.
+                ctx.cgContext.setFillColor(bgColor.cgColor)
+                ctx.cgContext.fill(CGRect(origin: .zero, size: size))
+            }
             finalOverlay?.draw(at: .zero)
         }
         animationOverlayImage = nil
@@ -206,7 +218,10 @@ class SpiroCanvas: ObservableObject {
 
         if let drawing = capturedDrawing {
             // Redraw all layers in the drawing from scratch.
+            let bgColor = drawingBackgroundColor
             renderedImage = UIGraphicsImageRenderer(size: size).image { ctx in
+                ctx.cgContext.setFillColor(bgColor.cgColor)
+                ctx.cgContext.fill(CGRect(origin: .zero, size: size))
                 ctx.cgContext.saveGState()
                 ctx.cgContext.translateBy(x: offset.x, y: offset.y)
                 drawing.draw(in: ctx.cgContext, rect: rect)
@@ -385,9 +400,15 @@ class SpiroCanvas: ObservableObject {
             layer.drawnTo   = manualLastStep
             // layer.loops was set at layer creation and is preserved as-is so
             // "Use as Template" restores the configured loop count.
-            let size = renderSize
+            let size    = renderSize
+            let bgColor = drawingBackgroundColor
             renderedImage = UIGraphicsImageRenderer(size: size).image { ctx in
-                renderedImage?.draw(at: .zero)
+                if let existing = renderedImage {
+                    existing.draw(at: .zero)
+                } else {
+                    ctx.cgContext.setFillColor(bgColor.cgColor)
+                    ctx.cgContext.fill(CGRect(origin: .zero, size: size))
+                }
                 overlay.draw(at: .zero)
             }
         }
@@ -418,10 +439,18 @@ class SpiroCanvas: ObservableObject {
 
     func appendLayer(_ layer: SpiroLayer) {
         guard canvasSize.width > 0, canvasSize.height > 0 else { return }
-        let rect   = CGRect(origin: .zero, size: canvasSize)
-        let offset = renderOffset
-        renderedImage = UIGraphicsImageRenderer(size: renderSize).image { ctx in
-            self.renderedImage?.draw(at: .zero)
+        let rect    = CGRect(origin: .zero, size: canvasSize)
+        let offset  = renderOffset
+        let size    = renderSize
+        let bgColor = drawingBackgroundColor
+        renderedImage = UIGraphicsImageRenderer(size: size).image { ctx in
+            if let existing = self.renderedImage {
+                existing.draw(at: .zero)
+            } else {
+                // First layer — paint the drawing background before the stroke.
+                ctx.cgContext.setFillColor(bgColor.cgColor)
+                ctx.cgContext.fill(CGRect(origin: .zero, size: size))
+            }
             ctx.cgContext.saveGState()
             ctx.cgContext.translateBy(x: offset.x, y: offset.y)
             let path = layer.path(in: rect)
@@ -437,9 +466,12 @@ class SpiroCanvas: ObservableObject {
         cancelAnimation()
         cancelManualDrawing()
         guard canvasSize.width > 0, canvasSize.height > 0 else { return }
-        let rect   = CGRect(origin: .zero, size: canvasSize)
-        let offset = renderOffset
+        let rect    = CGRect(origin: .zero, size: canvasSize)
+        let offset  = renderOffset
+        let bgColor = drawingBackgroundColor
         renderedImage = UIGraphicsImageRenderer(size: renderSize).image { ctx in
+            ctx.cgContext.setFillColor(bgColor.cgColor)
+            ctx.cgContext.fill(CGRect(origin: .zero, size: renderSize))
             ctx.cgContext.saveGState()
             ctx.cgContext.translateBy(x: offset.x, y: offset.y)
             drawing.draw(in: ctx.cgContext, rect: rect)
@@ -451,6 +483,7 @@ class SpiroCanvas: ObservableObject {
         cancelAnimation()
         cancelManualDrawing()
         renderedImage = nil
+        drawingBackgroundColor = .white
     }
 
     /// Returns the rendered image cropped tightly to the bounding box of the drawing content.
@@ -515,7 +548,7 @@ struct SpiroCanvasView: View {
     @Binding var lastScale: CGFloat
 
     var body: some View {
-        Color.white
+        Color(uiColor: canvas.drawingBackgroundColor)
             .overlay(
                 Group {
                     if let image = canvas.renderedImage {

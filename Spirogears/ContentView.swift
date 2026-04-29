@@ -19,11 +19,16 @@ struct ContentView: View {
     @State private var isModified = false
     @State private var layerVersion = 0
 
-    @AppStorage("showGears")      private var showGears      = true
-    @AppStorage("animate")        private var animate        = false
-    @AppStorage("animationSpeed") private var animationSpeed = AnimationSpeed.medium
-    @AppStorage("manualDrawing")  private var manualDrawing  = false
-    @AppStorage("haptics")        private var haptics        = true
+    @AppStorage("showGears")              private var showGears             = true
+    @AppStorage("animate")                private var animate               = false
+    @AppStorage("animationSpeed")         private var animationSpeed        = AnimationSpeed.medium
+    @AppStorage("manualDrawing")          private var manualDrawing         = false
+    @AppStorage("haptics")                private var haptics               = true
+    @AppStorage("defaultBackgroundColor") private var defaultBackgroundColorHex: String = "#FFFFFF"
+
+    private var defaultBackgroundUIColor: UIColor {
+        UIColor(hex: defaultBackgroundColorHex) ?? .white
+    }
 
     // Zoom state lifted from SpiroCanvasView so GearOverlayView can share the same scale
     @State private var canvasScale: CGFloat = 1.0
@@ -325,7 +330,10 @@ struct ContentView: View {
             }
             drawingsCreated += 1
             clear()
-            currentDrawing = SpiroDrawing()
+            let newDrawing = SpiroDrawing()
+            newDrawing.backgroundColor = defaultBackgroundUIColor
+            currentDrawing = newDrawing
+            canvas.drawingBackgroundColor = defaultBackgroundUIColor
             showConfigAfterDismiss()
         case .addLayer:
             if store.entitlement == .free,
@@ -342,7 +350,10 @@ struct ContentView: View {
             }
             drawingsCreated += 1
             clear()
-            currentDrawing = SpiroDrawing()
+            let newDrawing = SpiroDrawing()
+            newDrawing.backgroundColor = defaultBackgroundUIColor
+            currentDrawing = newDrawing
+            canvas.drawingBackgroundColor = defaultBackgroundUIColor
             SpiroDialogData.lastData = data
             showConfigAfterDismiss()
         case .useLayersAsTemplate(let dataArray):
@@ -353,6 +364,7 @@ struct ContentView: View {
             drawingsCreated += 1
             clear()
             let newDrawing = SpiroDrawing()
+            newDrawing.backgroundColor = defaultBackgroundUIColor
             for data in dataArray {
                 let layer = data.makeLayer()
                 newDrawing.addLayer(layer)
@@ -363,6 +375,7 @@ struct ContentView: View {
             }
             currentDrawing = newDrawing
             layersSheetContext = nil
+            canvas.drawingBackgroundColor = defaultBackgroundUIColor
             canvas.redrawAll(drawing: newDrawing)
             isModified = true
             updateShareImage()
@@ -408,6 +421,15 @@ struct ContentView: View {
 
         case .replaceLayer(let index, let layer):
             replaceLayer(at: index, with: layer)
+
+        case .updateBackgroundColor(let color):
+            guard let drawing = currentDrawing else { return }
+            drawing.backgroundColor = color
+            canvas.drawingBackgroundColor = color
+            isModified = true
+            layerVersion += 1
+            canvas.redrawAll(drawing: drawing)
+            updateShareImage()
         }
     }
 
@@ -426,6 +448,7 @@ struct ContentView: View {
     private func loadDrawing(_ drawing: SpiroDrawing) {
         clear()
         currentDrawing = drawing
+        canvas.drawingBackgroundColor = drawing.backgroundColor
         if animate {
             canvas.animateDrawing(drawing, pointsPerFrame: animationSpeed.pointsPerFrame)
             // share image updated via onChange(isAnimating)
@@ -533,7 +556,7 @@ struct ContentView: View {
     }
 
     private func updateShareImage() {
-        guard let drawing = currentDrawing,
+        guard let drawing = currentDrawing, !drawing.layers.isEmpty,
               let image = canvas.exportImage(for: drawing) ?? canvas.renderedImage else {
             shareImage = nil
             shareURL = nil
