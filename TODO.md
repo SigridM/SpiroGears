@@ -17,17 +17,6 @@
 
 --- 
 
-### ⬜ Layer Editing
-**Priority:** Medium
-**Status:** Pending
-**Description** For non-free users only, allow the user to edit any layer in their drawing. (Can't allow this for free users or they'd get more than three drawings total by infinitely editing layers.) Allow these layer editing features: 
-    [ ] Reconfigure layer (different sizes, starts, ends, color, etc.)
-    [ ] Hide/Show layer (add a "Show Layers" checkbox for which layers are shown so the user can uncheck one or more layers to hide them from the drawing)
-    [ ] Rearrange layers (drag them up and down in a list of layers)
-    [ ] Delete layer (with undo/redo)
-
----
-
 ## Pending Tasks – Low Priority
 
 ### ⬜ Commit the xcshareddata directory
@@ -494,5 +483,16 @@ Calling this "Ghost Mode" because it draws thorugh the ring as if it is a ghost.
 **Priority:** Medium
 **Status:** Pending
 **Description:** Figure out what to do if/when the user saves more than a handful of drawings. The "Saved" section of the Library will get too long to be manageable.
+
+---
+
+### ✅ Layer Editing
+**Priority:** Medium
+**Status:** Pending
+**Description** For non-free users only, allow the user to edit any layer in their drawing. (Can't allow this for free users or they'd get more than three drawings total by infinitely editing layers.) Allow these layer editing features: 
+    [x] Reconfigure layer (different sizes, starts, ends, color, etc.)
+    [x] Hide/Show layer (add a "Show Layers" checkbox for which layers are shown so the user can uncheck one or more layers to hide them from the drawing)
+    [x] Rearrange layers (drag them up and down in a list of layers)
+    [x] Delete layer (with undo/redo)
 
 ---
