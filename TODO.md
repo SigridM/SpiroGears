@@ -15,14 +15,14 @@
 ### ⬜ Redraw
 **Priority:** Low
 **Status:** Pending
-**Description:** Add a "redraw" option so an entire drawing (all the layers) can be redrawn. This will allow a user to draw the same drawing again with animation on or at a different speed. (This is actually already there if the user saves the drawing; it animates when they open a saved drawing.)
+**Description:** Add a "redraw" button so an entire drawing (all the layers) can be redrawn. This will allow a user to draw the same drawing again with animation on or at a different speed. This is already there only if the user saves the drawing; it animates when they open a saved drawing. Allow it even for unsaved drawings.
 
 ---
 
 ### ⬜ Dark Mode
 **Priority:** Low
 **Status:** Pending
-**Description:** Let there be an option to see the drawings against a black background. Keep the background be part of the drawing so it can be saved and shared that way.
+**Description:** Let there be an option to see the drawings against a black background. Keep the background as part of the drawing so it can be saved and shared that way.
 
 
 ---
