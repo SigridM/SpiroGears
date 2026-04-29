@@ -129,10 +129,6 @@ struct LayersView: View {
         }
     }
 
-    @State private var editMode: EditMode = .inactive
-
-    private var isReordering: Bool { editMode == .active }
-
     var body: some View {
         List {
             ForEach(layerInfos) { info in
@@ -147,7 +143,6 @@ struct LayersView: View {
                     dialogData:       info.dialogData,
                     layerIndex:       info.id,
                     isSubscribed:     isSubscribed,
-                    isReordering:     isReordering,
                     onAction: { action in
                         if case .reconfigureLayer(let idx, let data) = action {
                             pendingReconfigure = PendingReconfigure(layerIndex: idx, data: data)
@@ -164,14 +159,8 @@ struct LayersView: View {
                 onAction(.moveLayer(source, destination))
             } : nil)
         }
-        .environment(\.editMode, $editMode)
         .navigationTitle("Layers")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            if isSubscribed {
-                ToolbarItem(placement: .navigationBarTrailing) { EditButton() }
-            }
-        }
         .sheet(item: $pendingReconfigure) { pending in
             SpiroConfigView(data: pending.data, title: "Edit Layer") { result in
                 pendingReconfigure = nil
@@ -194,7 +183,6 @@ private struct LayerRow: View {
     let dialogData: SpiroDialogData
     let layerIndex: Int
     let isSubscribed: Bool
-    let isReordering: Bool
     let onAction: (DrawingMenuView.Action) -> Void
 
     var body: some View {
@@ -223,7 +211,7 @@ private struct LayerRow: View {
 
             Spacer()
 
-            if isSubscribed && !isReordering {
+            if isSubscribed {
                 Button {
                     onAction(.toggleLayerHidden(layerIndex))
                 } label: {
@@ -249,7 +237,7 @@ private struct LayerRow: View {
                 .buttonStyle(.plain)
                 .foregroundStyle(.secondary)
                 .padding(.leading, 8)
-            } else if !isReordering {
+            } else {
                 Button("Use as template") {
                     onAction(.useAsTemplate(dialogData))
                 }
