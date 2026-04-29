@@ -1,4 +1,5 @@
 import UIKit
+import SwiftUI
 
 class SpiroDrawing {
     var layers: [SpiroLayer] = []
@@ -15,13 +16,27 @@ class SpiroDrawing {
     }
 
     func draw(in context: CGContext, rect: CGRect) {
-        for layer in layers {
+        for layer in layers where !layer.isHidden {
             let path = layer.path(in: rect)
             context.setStrokeColor(layer.penColor.cgColor)
             context.setLineWidth(1.0)
             context.addPath(path.cgPath)
             context.strokePath()
         }
+    }
+
+    @discardableResult
+    func removeLayer(at index: Int) -> SpiroLayer? {
+        guard index >= 0, index < layers.count else { return nil }
+        return layers.remove(at: index)
+    }
+
+    func insertLayer(_ layer: SpiroLayer, at index: Int) {
+        layers.insert(layer, at: Swift.min(Swift.max(0, index), layers.count))
+    }
+
+    func moveLayer(from source: IndexSet, to destination: Int) {
+        layers.move(fromOffsets: source, toOffset: destination)
     }
 
     // MARK: - Saved drawings
@@ -57,7 +72,7 @@ class SpiroDrawing {
         let computeRect = CGRect(origin: .zero, size: CGSize(width: computeSize, height: computeSize))
 
         var contentBounds = CGRect.null
-        for layer in drawing.layers {
+        for layer in drawing.layers where !layer.isHidden {
             let b = layer.path(in: computeRect).bounds
             if !b.isEmpty { contentBounds = contentBounds.union(b) }
         }

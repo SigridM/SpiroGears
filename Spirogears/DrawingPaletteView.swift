@@ -7,10 +7,11 @@ struct DrawingPaletteView: View {
     let currentDrawing: SpiroDrawing?
     let savedDrawingNames: [String]
     let thumbnails: [String: UIImage]
+    let hasUndo: Bool
     let hasUndone: Bool
     let onAction: (DrawingMenuView.Action) -> Void
+    let onShowLayers: () -> Void
 
-    @State private var showingLayers  = false
     @State private var showingLibrary = false
 
     private var hasLayers: Bool { !(currentDrawing?.layers.isEmpty ?? true) }
@@ -21,10 +22,10 @@ struct DrawingPaletteView: View {
             PaletteButton(imageName: "AddLayerIcon",    label: "Layer")  { onAction(.addLayer) }
                 .disabled(currentDrawing == nil)
             PaletteButton(imageName: "UndoLayerIcon",   label: "Undo")   { onAction(.undoLayer) }
-                .disabled(!hasLayers)
+                .disabled(!hasUndo)
             PaletteButton(imageName: "RedoLayerIcon",   label: "Redo")   { onAction(.redoLayer) }
                 .disabled(!hasUndone)
-            PaletteButton(imageName: "EditLayersIcon",  label: "Layers") { showingLayers = true }
+            PaletteButton(imageName: "EditLayersIcon",  label: "Layers") { onShowLayers() }
                 .disabled(!hasLayers)
             PaletteButton(systemName: "square.and.arrow.down", label: "Save")    { onAction(.save) }
                 .disabled(!hasLayers)
@@ -37,17 +38,6 @@ struct DrawingPaletteView: View {
             Rectangle()
                 .fill(.regularMaterial)
                 .ignoresSafeArea(edges: .bottom)
-        }
-        .sheet(isPresented: $showingLayers) {
-            if let drawing = currentDrawing {
-                NavigationStack {
-                    LayersView(drawing: drawing, onAction: { action in
-                        showingLayers = false
-                        onAction(action)
-                    })
-                }
-                .presentationDetents([.medium, .large])
-            }
         }
         .sheet(isPresented: $showingLibrary) {
             NavigationStack {

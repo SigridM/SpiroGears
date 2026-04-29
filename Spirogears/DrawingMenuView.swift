@@ -15,6 +15,11 @@ struct DrawingMenuView: View {
         case drawSaved(String)
         case deleteSaved(String)
         case clear
+        // Layer editing (subscribers only)
+        case deleteLayer(Int)
+        case toggleLayerHidden(Int)
+        case moveLayer(IndexSet, Int)
+        case reconfigureLayer(Int, SpiroDialogData)
     }
 
     let currentDrawing: SpiroDrawing?
@@ -38,7 +43,7 @@ struct DrawingMenuView: View {
                     .disabled(!hasLayers)
                 if hasLayers {
                     NavigationLink("Show Layers") {
-                        LayersView(drawing: currentDrawing!, onAction: onAction)
+                        LayersView(drawing: currentDrawing!, layerVersion: 0, isSubscribed: false, onAction: onAction)
                     }
                 }
             }
@@ -65,42 +70,130 @@ struct DrawingMenuView: View {
 
 // MARK: - Layers detail view
 
+// Pure-value snapshot of one layer. Storing only value types in ForEach data
+// eliminates any risk of class references becoming dangling before SwiftUI
+// lazily evaluates row bodies (seen as PAC failures on ARM64e / iOS 26 beta).
+private struct LayerInfo: Identifiable {
+    let id: Int   // layer index — serves as ForEach identity
+    let number: Int
+    let innerRingNotches: Int
+    let wheelNotches: Int
+    let holeNumber: Int
+    let startingNotch: Int
+    let penColor: Color
+    let isHidden: Bool
+    let dialogData: SpiroDialogData
+}
+
 struct LayersView: View {
     let drawing: SpiroDrawing
+    let layerVersion: Int          // incremented by ContentView after each edit to force re-render
+    let isSubscribed: Bool         // passed explicitly — avoids @Environment class-reference issues
     let onAction: (DrawingMenuView.Action) -> Void
+
+    // Snapshot taken while `drawing` is guaranteed alive (body evaluation time).
+    // The resulting array is pure value types — no SpiroLayer class references.
+    private var layerInfos: [LayerInfo] {
+        drawing.layers.indices.map { index in
+            let layer  = drawing.layers[index]
+            let innerN = layer.stationaryGuide.innerNotchCircumference
+            let wheelN = layer.penGuide.outerNotchCircumference
+            let holeN  = layer.penGuide.storedHoleNumber
+            let startN = layer.stationaryGuide.startingNotch
+            let color  = Color(uiColor: layer.penColor)
+            return LayerInfo(
+                id:               index,
+                number:           index + 1,
+                innerRingNotches: innerN,
+                wheelNotches:     wheelN,
+                holeNumber:       holeN,
+                startingNotch:    startN,
+                penColor:         color,
+                isHidden:         layer.isHidden,
+                dialogData:       SpiroDialogData(innerRingNotches: innerN,
+                                                  wheelNotches:     wheelN,
+                                                  color:            color,
+                                                  holeNumber:       holeN,
+                                                  startingNotch:    startN,
+                                                  loops:            layer.loops)
+            )
+        }
+    }
+
+    @State private var editMode: EditMode = .inactive
+
+    private var isReordering: Bool { editMode == .active }
 
     var body: some View {
         List {
-            ForEach(Array(drawing.layers.enumerated()), id: \.offset) { index, layer in
-                LayerRow(number: index + 1, layer: layer, onAction: onAction)
+            ForEach(layerInfos) { info in
+                LayerRow(
+                    number:           info.number,
+                    innerRingNotches: info.innerRingNotches,
+                    wheelNotches:     info.wheelNotches,
+                    holeNumber:       info.holeNumber,
+                    startingNotch:    info.startingNotch,
+                    penColor:         info.penColor,
+                    isHidden:         info.isHidden,
+                    dialogData:       info.dialogData,
+                    layerIndex:       info.id,
+                    isSubscribed:     isSubscribed,
+                    isReordering:     isReordering,
+                    onAction:         onAction
+                )
             }
+            .onDelete(perform: isSubscribed ? { indexSet in
+                for index in indexSet { onAction(.deleteLayer(layerInfos[index].id)) }
+            } : nil)
+            .onMove(perform: isSubscribed ? { source, destination in
+                onAction(.moveLayer(source, destination))
+            } : nil)
         }
+        .environment(\.editMode, $editMode)
         .navigationTitle("Layers")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if isSubscribed {
+                ToolbarItem(placement: .navigationBarTrailing) { EditButton() }
+            }
+        }
     }
 }
 
+// All properties are value types — no class references that can become dangling.
 private struct LayerRow: View {
     let number: Int
-    let layer: SpiroLayer
+    let innerRingNotches: Int
+    let wheelNotches: Int
+    let holeNumber: Int
+    let startingNotch: Int
+    let penColor: Color
+    let isHidden: Bool
+    let dialogData: SpiroDialogData
+    let layerIndex: Int
+    let isSubscribed: Bool
+    let isReordering: Bool
     let onAction: (DrawingMenuView.Action) -> Void
 
     var body: some View {
         HStack(alignment: .center, spacing: 12) {
             Circle()
-                .fill(Color(uiColor: layer.penColor))
+                .fill(penColor)
                 .frame(width: 16, height: 16)
+                .opacity(isHidden ? 0.3 : 1.0)
 
             VStack(alignment: .leading, spacing: 4) {
-                Text("Layer \(number)").font(.headline)
+                Text("Layer \(number)")
+                    .font(.headline)
+                    .foregroundStyle(isHidden ? .secondary : .primary)
                 Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 2) {
                     GridRow {
-                        label("Inner ring"); value(layer.stationaryGuide.innerNotchCircumference)
-                        label("Wheel");     value(layer.penGuide.outerNotchCircumference)
+                        label("Inner ring"); value(innerRingNotches)
+                        label("Wheel");      value(wheelNotches)
                     }
                     GridRow {
-                        label("Hole");      value(layer.penGuide.storedHoleNumber)
-                        label("Start");     value(layer.stationaryGuide.startingNotch)
+                        label("Hole");       value(holeNumber)
+                        label("Start");      value(startingNotch)
                     }
                 }
                 .font(.caption)
@@ -108,11 +201,39 @@ private struct LayerRow: View {
 
             Spacer()
 
-            Button("Use as template") {
-                onAction(.useAsTemplate(SpiroDialogData(from: layer)))
+            if isSubscribed && !isReordering {
+                Button {
+                    onAction(.toggleLayerHidden(layerIndex))
+                } label: {
+                    Image(systemName: isHidden ? "eye.slash" : "eye")
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
+
+                Button {
+                    onAction(.reconfigureLayer(layerIndex, dialogData))
+                } label: {
+                    Image(systemName: "pencil")
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
+                .padding(.leading, 8)
+
+                Button {
+                    onAction(.useAsTemplate(dialogData))
+                } label: {
+                    Image(systemName: "doc.on.doc")
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
+                .padding(.leading, 8)
+            } else if !isReordering {
+                Button("Use as template") {
+                    onAction(.useAsTemplate(dialogData))
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
             }
-            .buttonStyle(.bordered)
-            .controlSize(.small)
         }
         .padding(.vertical, 4)
     }

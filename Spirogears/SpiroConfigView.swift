@@ -5,6 +5,7 @@ import SwiftUI
 
 struct SpiroConfigView: View {
     @State var data: SpiroDialogData
+    var title: String = "Add Layer"
     let completion: (SpiroDialogData?) -> Void
 
     private var maxHole: Int {
@@ -107,7 +108,7 @@ struct SpiroConfigView: View {
                     }
                 }
             }
-            .navigationTitle("Add Layer")
+            .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

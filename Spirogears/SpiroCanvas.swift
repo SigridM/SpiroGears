@@ -460,7 +460,7 @@ class SpiroCanvas: ObservableObject {
         let rect = CGRect(origin: .zero, size: canvasSize)
 
         var contentBounds = CGRect.null
-        for layer in drawing.layers {
+        for layer in drawing.layers where !layer.isHidden {
             let b = layer.path(in: rect).bounds
             if !b.isEmpty { contentBounds = contentBounds.union(b) }
         }

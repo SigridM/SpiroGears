@@ -14,8 +14,10 @@ struct ContentView: View {
     @StateObject private var canvas = SpiroCanvas()
     @State private var currentDrawing: SpiroDrawing?
     @State private var currentDrawingName: String = ""
-    @State private var undoneLayers: [SpiroLayer] = []
+    @State private var undoOps: [LayerOp] = []
+    @State private var redoOps: [LayerOp] = []
     @State private var isModified = false
+    @State private var layerVersion = 0
 
     @AppStorage("showGears")      private var showGears      = true
     @AppStorage("animate")        private var animate        = false
@@ -53,6 +55,8 @@ struct ContentView: View {
     @State private var showingSaveBeforeAction = false
     @State private var showingPresetNameError = false
     @State private var paywallRequest: PaywallRequest? = nil
+    @State private var layersSheetContext: LayersSheetContext? = nil
+    @State private var reconfigureRequest: ReconfigureRequest? = nil
 
     @State private var saveNameInput = ""
     @State private var savedDrawingNames: [String] = []
@@ -182,10 +186,15 @@ struct ContentView: View {
                     currentDrawing: currentDrawing,
                     savedDrawingNames: savedDrawingNames,
                     thumbnails: savedThumbnails,
-                    hasUndone: !undoneLayers.isEmpty
-                ) { action in
-                    handleMenuAction(action)
-                }
+                    hasUndo: !undoOps.isEmpty,
+                    hasUndone: !redoOps.isEmpty,
+                    onAction: { action in handleMenuAction(action) },
+                    onShowLayers: {
+                        if let d = currentDrawing {
+                            layersSheetContext = LayersSheetContext(drawing: d)
+                        }
+                    }
+                )
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
         }
@@ -199,21 +208,23 @@ struct ContentView: View {
                 guard let data else { return }
                 if currentDrawing == nil { currentDrawing = SpiroDrawing() }
                 let layer = data.makeLayer()
-                undoneLayers.removeAll()
+                redoOps.removeAll()
                 if manualDrawing {
                     // Gears must be visible while drawing manually.
                     showGears = true
                     // Don't commit to the drawing yet — wait for the drag to finish.
                     canvas.beginManualDrawing(layer: layer)
                     isModified = true
-                    // share image updated via onChange(isManualDrawing) at finalization
+                    // undoOps updated in finalizeManualDrawing; share image updated via onChange(isManualDrawing)
                 } else if animate {
                     currentDrawing?.addLayer(layer)
+                    undoOps.append(.added(layer))
                     canvas.animateLayer(layer, pointsPerFrame: animationSpeed.pointsPerFrame)
                     isModified = true
                     // share image updated via onChange(isAnimating)
                 } else {
                     currentDrawing?.addLayer(layer)
+                    undoOps.append(.added(layer))
                     canvas.appendLayer(layer)
                     isModified = true
                     updateShareImage()
@@ -223,6 +234,25 @@ struct ContentView: View {
         .sheet(item: $paywallRequest) { request in
             PaywallView(feature: request.feature) { paywallRequest = nil }
                 .environment(store)
+        }
+        .sheet(item: $layersSheetContext) { ctx in
+            NavigationStack {
+                LayersView(
+                    drawing: ctx.drawing,
+                    layerVersion: layerVersion,
+                    isSubscribed: store.entitlement != .free,
+                    onAction: { action in handleMenuAction(action) }
+                )
+            }
+            .environment(store)
+            .presentationDetents([.medium, .large])
+        }
+        .sheet(item: $reconfigureRequest) { request in
+            SpiroConfigView(data: request.data, title: "Edit Layer") { data in
+                reconfigureRequest = nil
+                guard let data else { return }
+                replaceLayer(at: request.layerIndex, with: data.makeLayer())
+            }
         }
         .task {
             savedDrawingNames = SpiroDrawing.savedDrawingNames
@@ -331,6 +361,37 @@ struct ContentView: View {
             savedDrawingNames = SpiroDrawing.savedDrawingNames
             savedThumbnails = SpiroDrawing.allThumbnails
         case .clear:       clear()
+
+        case .deleteLayer(let index):
+            guard let drawing = currentDrawing,
+                  let layer = drawing.removeLayer(at: index) else { return }
+            undoOps.append(.deleted(layer, at: index))
+            redoOps.removeAll()
+            isModified = true
+            layerVersion += 1
+            canvas.redrawAll(drawing: drawing)
+            updateShareImage()
+
+        case .toggleLayerHidden(let index):
+            guard let drawing = currentDrawing,
+                  index >= 0, index < drawing.layers.count else { return }
+            drawing.layers[index].isHidden.toggle()
+            isModified = true
+            layerVersion += 1
+            canvas.redrawAll(drawing: drawing)
+            updateShareImage()
+
+        case .moveLayer(let source, let destination):
+            guard let drawing = currentDrawing else { return }
+            drawing.moveLayer(from: source, to: destination)
+            isModified = true
+            layerVersion += 1
+            canvas.redrawAll(drawing: drawing)
+            updateShareImage()
+
+        case .reconfigureLayer(let index, let data):
+            layersSheetContext = nil
+            reconfigureRequest = ReconfigureRequest(layerIndex: index, data: data)
         }
     }
 
@@ -374,7 +435,9 @@ struct ContentView: View {
         manualCursorOutside      = false
         currentDrawing = nil
         currentDrawingName = ""
-        undoneLayers.removeAll()
+        undoOps.removeAll()
+        redoOps.removeAll()
+        layerVersion = 0
         isModified = false
         shareImage = nil
         shareURL = nil
@@ -383,19 +446,36 @@ struct ContentView: View {
 
     private func undoLastLayer() {
         guard let drawing = currentDrawing,
-              let layer = drawing.removeLastLayer() else { return }
-        undoneLayers.append(layer)
+              let op = undoOps.popLast() else { return }
+        switch op {
+        case .added(let layer):
+            drawing.removeLastLayer()
+            redoOps.append(.added(layer))
+        case .deleted(let layer, let at):
+            drawing.insertLayer(layer, at: at)
+            redoOps.append(.deleted(layer, at: at))
+        }
         isModified = true
+        layerVersion += 1
         canvas.redrawAll(drawing: drawing)
         updateShareImage()
     }
 
     private func redoLastLayer() {
         guard let drawing = currentDrawing,
-              let layer = undoneLayers.popLast() else { return }
-        drawing.addLayer(layer)
+              let op = redoOps.popLast() else { return }
+        switch op {
+        case .added(let layer):
+            drawing.addLayer(layer)
+            undoOps.append(.added(layer))
+            canvas.appendLayer(layer)
+        case .deleted(let layer, let at):
+            drawing.removeLayer(at: at)
+            undoOps.append(.deleted(layer, at: at))
+            canvas.redrawAll(drawing: drawing)
+        }
         isModified = true
-        canvas.appendLayer(layer)
+        layerVersion += 1
         updateShareImage()
     }
 
@@ -423,6 +503,17 @@ struct ContentView: View {
         savedThumbnails = SpiroDrawing.allThumbnails
         isModified = false
         runPendingAction()
+    }
+
+    private func replaceLayer(at index: Int, with newLayer: SpiroLayer) {
+        guard let drawing = currentDrawing,
+              index >= 0, index < drawing.layers.count else { return }
+        drawing.layers[index] = newLayer
+        redoOps.removeAll()
+        isModified = true
+        layerVersion += 1
+        canvas.redrawAll(drawing: drawing)
+        updateShareImage()
     }
 
     private func updateShareImage() {
@@ -620,6 +711,8 @@ struct ContentView: View {
     private func finalizeManualDrawing() {
         if let layer = canvas.endManualDrawing() {
             currentDrawing?.addLayer(layer)
+            undoOps.append(.added(layer))
+            layerVersion += 1
             // isModified was already set true when the config was confirmed.
         } else {
             // No strokes were drawn — just cancel silently.
@@ -632,6 +725,24 @@ struct ContentView: View {
         manualDragActive         = false
         manualCursorOutside      = false
     }
+}
+
+// MARK: - Supporting types
+
+private enum LayerOp {
+    case added(SpiroLayer)
+    case deleted(SpiroLayer, at: Int)
+}
+
+private struct LayersSheetContext: Identifiable {
+    let id = UUID()
+    let drawing: SpiroDrawing  // captured at tap time; strong reference kept for sheet lifetime
+}
+
+private struct ReconfigureRequest: Identifiable {
+    let id = UUID()
+    let layerIndex: Int
+    let data: SpiroDialogData
 }
 
 #Preview {

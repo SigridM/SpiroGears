@@ -5,6 +5,7 @@ class SpiroLayer {
     var penGuide: SpiroWheel
     var stationaryGuide: SpiroRing
     var offset: CGPoint
+    var isHidden: Bool = false
 
     // The step range actually drawn. drawnFrom defaults to 0; drawnTo defaults to
     // nil, which means the full stepCount. Manual drawing sets both at finalization.
