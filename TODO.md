@@ -10,20 +10,14 @@
 
 ## Pending Tasks – Medium Priority - Features
 
-## Pending Tasks – Low Priority
-
-### ⬜ Commit the xcshareddata directory
+### ⬜ New From Template Enhancements
 **Priority:** Low
 **Status:** Pending
-**Description:** `Spirogears.xcodeproj/xcshareddata/xcschemes/Spirogears.xcscheme` is untracked. Shared schemes belong in source control so any team member (or future device) gets the same build configuration.
-
-**Steps:**
-```
-git add Spirogears.xcodeproj/xcshareddata/
-git commit -m "Add shared Xcode scheme"
-```
+**Description:** When creating a new drawing from a template, keep the configuration of the last layer copied as the default for any new layer or drawing (just as if it was drawn from scratch). Also, enable the "Undo Layer" button (again, just as if the layers were drawn from scratch.)
 
 ---
+
+## Pending Tasks – Low Priority
 
 ### ⬜ Redraw
 **Priority:** Low
@@ -497,3 +491,16 @@ Calling this "Ghost Mode" because it draws thorugh the ring as if it is a ghost.
     One question would be: if it shows a copy symbol, would the user expect it to go to the clipboard? And if so, can we both use that as the basis for a new drawing *and* copy it to the clipboard for them to paste elsewhere? (If the latter, include the same attribution as when sharing.) Is there standard UI for "copy all checked?
 
 --- 
+
+### ✅ Commit the xcshareddata directory
+**Priority:** Low
+**Status:** Complete
+**Description:** `Spirogears.xcodeproj/xcshareddata/xcschemes/Spirogears.xcscheme` is untracked. Shared schemes belong in source control so any team member (or future device) gets the same build configuration.
+
+**Steps:**
+```
+git add Spirogears.xcodeproj/xcshareddata/
+git commit -m "Add shared Xcode scheme"
+```
+
+---
