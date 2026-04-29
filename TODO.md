@@ -22,7 +22,7 @@
 ### ⬜ Dark Mode
 **Priority:** Low
 **Status:** Pending
-**Description:** Let there be an option to see the drawings against a black background. Question: should the background be part of the drawing? Should it be saved and shared that way?
+**Description:** Let there be an option to see the drawings against a black background. Keep the background be part of the drawing so it can be saved and shared that way.
 
 
 ---
