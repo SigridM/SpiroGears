@@ -15,15 +15,15 @@
 ### ⬜ Redraw
 **Priority:** Low
 **Status:** Pending
-**Description:** Add a "redraw" button so an entire drawing (all the layers) can be redrawn. This will allow a user to draw the same drawing again with animation on or at a different speed. This is already there only if the user saves the drawing; it animates when they open a saved drawing. Allow it even for unsaved drawings.
+**Description:** Add a "redraw" button so an entire drawing (all the layers) can be redrawn. This will allow a user to draw the same drawing again with animation on or at a different speed. This is already there only if the user saves the drawing; it animates when they open a saved drawing (if they have automatic/animation turned on). Allow it even for unsaved drawings. This should be an automatic redraw even if manual drawing mode is selected. [Actually, I'm starting to be unsure about this. Maybe we can just let them save the drawing, change the drawing settings if they want, and ]
 
 ---
 
-### ⬜ Dark Mode
+### ⬜ Background Layer
 **Priority:** Low
 **Status:** Pending
 **Description:** Let there be an option to see the drawings against a black background. Keep the background as part of the drawing so it can be saved and shared that way.
-
+    Suggested impplementation: Create a special case of a layer that is just a solid color: a Background Layer. This layer can only be configurd by color (not by the other configurations for a drawing layer) and cannot be reordered; it must stay as the background. Also create a new setting for "Default Background Color" (which will be factory set at white until the user changes it in their settings). New drawings will use the Default Background Color. Allow the user to change the background color of any drawing when they Show Layers and edit that Background Layer. Only the color of a Background Layer is editable. The Background Layer is part of the drawing and will hence also be part of the shared drawing and part of the thumbnail for saved drawings.
 
 ---
  
