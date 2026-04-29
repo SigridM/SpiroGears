@@ -20,6 +20,7 @@ struct DrawingMenuView: View {
         case toggleLayerHidden(Int)
         case moveLayer(IndexSet, Int)
         case reconfigureLayer(Int, SpiroDialogData)
+        case replaceLayer(Int, SpiroLayer)
     }
 
     let currentDrawing: SpiroDrawing?
@@ -85,11 +86,19 @@ private struct LayerInfo: Identifiable {
     let dialogData: SpiroDialogData
 }
 
+private struct PendingReconfigure: Identifiable {
+    let id = UUID()
+    let layerIndex: Int
+    let data: SpiroDialogData
+}
+
 struct LayersView: View {
     let drawing: SpiroDrawing
     let layerVersion: Int          // incremented by ContentView after each edit to force re-render
     let isSubscribed: Bool         // passed explicitly — avoids @Environment class-reference issues
     let onAction: (DrawingMenuView.Action) -> Void
+
+    @State private var pendingReconfigure: PendingReconfigure? = nil
 
     // Snapshot taken while `drawing` is guaranteed alive (body evaluation time).
     // The resulting array is pure value types — no SpiroLayer class references.
@@ -139,7 +148,13 @@ struct LayersView: View {
                     layerIndex:       info.id,
                     isSubscribed:     isSubscribed,
                     isReordering:     isReordering,
-                    onAction:         onAction
+                    onAction: { action in
+                        if case .reconfigureLayer(let idx, let data) = action {
+                            pendingReconfigure = PendingReconfigure(layerIndex: idx, data: data)
+                        } else {
+                            onAction(action)
+                        }
+                    }
                 )
             }
             .onDelete(perform: isSubscribed ? { indexSet in
@@ -155,6 +170,13 @@ struct LayersView: View {
         .toolbar {
             if isSubscribed {
                 ToolbarItem(placement: .navigationBarTrailing) { EditButton() }
+            }
+        }
+        .sheet(item: $pendingReconfigure) { pending in
+            SpiroConfigView(data: pending.data, title: "Edit Layer") { result in
+                pendingReconfigure = nil
+                guard let result else { return }
+                onAction(.replaceLayer(pending.layerIndex, result.makeLayer()))
             }
         }
     }

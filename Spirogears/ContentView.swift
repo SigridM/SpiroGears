@@ -56,7 +56,6 @@ struct ContentView: View {
     @State private var showingPresetNameError = false
     @State private var paywallRequest: PaywallRequest? = nil
     @State private var layersSheetContext: LayersSheetContext? = nil
-    @State private var reconfigureRequest: ReconfigureRequest? = nil
 
     @State private var saveNameInput = ""
     @State private var savedDrawingNames: [String] = []
@@ -247,13 +246,7 @@ struct ContentView: View {
             .environment(store)
             .presentationDetents([.medium, .large])
         }
-        .sheet(item: $reconfigureRequest) { request in
-            SpiroConfigView(data: request.data, title: "Edit Layer") { data in
-                reconfigureRequest = nil
-                guard let data else { return }
-                replaceLayer(at: request.layerIndex, with: data.makeLayer())
-            }
-        }
+
         .task {
             savedDrawingNames = SpiroDrawing.savedDrawingNames
             canvas.hapticsEnabled = haptics
@@ -389,9 +382,11 @@ struct ContentView: View {
             canvas.redrawAll(drawing: drawing)
             updateShareImage()
 
-        case .reconfigureLayer(let index, let data):
-            layersSheetContext = nil
-            reconfigureRequest = ReconfigureRequest(layerIndex: index, data: data)
+        case .reconfigureLayer:
+            break  // handled locally inside LayersView
+
+        case .replaceLayer(let index, let layer):
+            replaceLayer(at: index, with: layer)
         }
     }
 
@@ -739,11 +734,6 @@ private struct LayersSheetContext: Identifiable {
     let drawing: SpiroDrawing  // captured at tap time; strong reference kept for sheet lifetime
 }
 
-private struct ReconfigureRequest: Identifiable {
-    let id = UUID()
-    let layerIndex: Int
-    let data: SpiroDialogData
-}
 
 #Preview {
     ContentView()
