@@ -9,6 +9,7 @@ struct DrawingMenuView: View {
         case drawNew
         case addLayer
         case useAsTemplate(SpiroDialogData)
+        case useLayersAsTemplate([SpiroDialogData])
         case undoLayer
         case redoLayer
         case save
@@ -99,6 +100,7 @@ struct LayersView: View {
     let onAction: (DrawingMenuView.Action) -> Void
 
     @State private var pendingReconfigure: PendingReconfigure? = nil
+    @State private var selectedIndices: Set<Int> = []
 
     // Snapshot taken while `drawing` is guaranteed alive (body evaluation time).
     // The resulting array is pure value types — no SpiroLayer class references.
@@ -143,6 +145,8 @@ struct LayersView: View {
                     dialogData:       info.dialogData,
                     layerIndex:       info.id,
                     isSubscribed:     isSubscribed,
+                    isSelected:       selectedIndices.contains(info.id),
+                    onToggleSelected: { selectedIndices.formSymmetricDifference([info.id]) },
                     onAction: { action in
                         if case .reconfigureLayer(let idx, let data) = action {
                             pendingReconfigure = PendingReconfigure(layerIndex: idx, data: data)
@@ -161,6 +165,20 @@ struct LayersView: View {
         }
         .navigationTitle("Layers")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button {
+                    let selected = layerInfos
+                        .filter { selectedIndices.contains($0.id) }
+                        .map(\.dialogData)
+                    selectedIndices = []
+                    onAction(.useLayersAsTemplate(selected))
+                } label: {
+                    Label("Use Selected as Template", systemImage: "doc.on.doc")
+                }
+                .disabled(selectedIndices.isEmpty)
+            }
+        }
         .sheet(item: $pendingReconfigure) { pending in
             SpiroConfigView(data: pending.data, title: "Edit Layer") { result in
                 pendingReconfigure = nil
@@ -183,10 +201,20 @@ private struct LayerRow: View {
     let dialogData: SpiroDialogData
     let layerIndex: Int
     let isSubscribed: Bool
+    let isSelected: Bool
+    let onToggleSelected: () -> Void
     let onAction: (DrawingMenuView.Action) -> Void
 
     var body: some View {
         HStack(alignment: .center, spacing: 12) {
+            Button {
+                onToggleSelected()
+            } label: {
+                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                    .foregroundStyle(isSelected ? Color.accentColor : Color.secondary)
+            }
+            .buttonStyle(.plain)
+
             Circle()
                 .fill(penColor)
                 .frame(width: 16, height: 16)
@@ -228,21 +256,6 @@ private struct LayerRow: View {
                 .buttonStyle(.plain)
                 .foregroundStyle(.secondary)
                 .padding(.leading, 8)
-
-                Button {
-                    onAction(.useAsTemplate(dialogData))
-                } label: {
-                    Image(systemName: "doc.on.doc")
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle(.secondary)
-                .padding(.leading, 8)
-            } else {
-                Button("Use as template") {
-                    onAction(.useAsTemplate(dialogData))
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
             }
         }
         .padding(.vertical, 4)

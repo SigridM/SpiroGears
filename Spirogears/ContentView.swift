@@ -302,7 +302,7 @@ struct ContentView: View {
     private func shouldPromptToSave(before action: DrawingMenuView.Action) -> Bool {
         guard let drawing = currentDrawing, !drawing.layers.isEmpty, isModified else { return false }
         switch action {
-        case .drawExample, .drawNew, .drawSaved, .useAsTemplate, .clear:
+        case .drawExample, .drawNew, .drawSaved, .useAsTemplate, .useLayersAsTemplate, .clear:
             return true
         default:
             return false
@@ -345,6 +345,22 @@ struct ContentView: View {
             currentDrawing = SpiroDrawing()
             SpiroDialogData.lastData = data
             showConfigAfterDismiss()
+        case .useLayersAsTemplate(let dataArray):
+            if store.entitlement == .free && drawingsCreated >= SubscriptionStore.freeTierDrawingLimit {
+                paywallRequest = PaywallRequest(feature: "More than \(SubscriptionStore.freeTierDrawingLimit) drawings")
+                return
+            }
+            drawingsCreated += 1
+            clear()
+            let newDrawing = SpiroDrawing()
+            for data in dataArray {
+                newDrawing.addLayer(data.makeLayer())
+            }
+            currentDrawing = newDrawing
+            layersSheetContext = nil
+            canvas.redrawAll(drawing: newDrawing)
+            isModified = true
+            updateShareImage()
         case .undoLayer:   undoLastLayer()
         case .redoLayer:   redoLastLayer()
         case .save:        saveDrawing()
