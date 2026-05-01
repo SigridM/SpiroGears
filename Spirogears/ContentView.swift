@@ -325,7 +325,7 @@ struct ContentView: View {
             }
         case .drawNew:
             if store.entitlement == .free && drawingsCreated >= SubscriptionStore.freeTierDrawingLimit {
-                paywallRequest = PaywallRequest(feature: "More than \(SubscriptionStore.freeTierDrawingLimit) drawings")
+                showPaywall(for: "More than \(SubscriptionStore.freeTierDrawingLimit) drawings")
                 return
             }
             drawingsCreated += 1
@@ -339,13 +339,13 @@ struct ContentView: View {
             if store.entitlement == .free,
                let drawing = currentDrawing,
                drawing.layers.count >= SubscriptionStore.freeTierLayerLimit {
-                paywallRequest = PaywallRequest(feature: "More than \(SubscriptionStore.freeTierLayerLimit) layers per drawing")
+                showPaywall(for: "More than \(SubscriptionStore.freeTierLayerLimit) layers per drawing")
                 return
             }
             showConfigAfterDismiss()
         case .useAsTemplate(let data):
             if store.entitlement == .free && drawingsCreated >= SubscriptionStore.freeTierDrawingLimit {
-                paywallRequest = PaywallRequest(feature: "More than \(SubscriptionStore.freeTierDrawingLimit) drawings")
+                showPaywall(for: "More than \(SubscriptionStore.freeTierDrawingLimit) drawings")
                 return
             }
             drawingsCreated += 1
@@ -358,7 +358,7 @@ struct ContentView: View {
             showConfigAfterDismiss()
         case .useLayersAsTemplate(let dataArray):
             if store.entitlement == .free && drawingsCreated >= SubscriptionStore.freeTierDrawingLimit {
-                paywallRequest = PaywallRequest(feature: "More than \(SubscriptionStore.freeTierDrawingLimit) drawings")
+                showPaywall(for: "More than \(SubscriptionStore.freeTierDrawingLimit) drawings")
                 return
             }
             drawingsCreated += 1
@@ -441,6 +441,21 @@ struct ContentView: View {
 
     private func showConfigAfterDismiss() {
         showingConfig = true
+    }
+
+    /// Show the paywall, dismissing the layers sheet first if it is open.
+    /// SwiftUI cannot present two sheets simultaneously, so we must let the
+    /// layers sheet dismiss before presenting the paywall.
+    private func showPaywall(for feature: String) {
+        if layersSheetContext != nil {
+            layersSheetContext = nil
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(600))
+                paywallRequest = PaywallRequest(feature: feature)
+            }
+        } else {
+            paywallRequest = PaywallRequest(feature: feature)
+        }
     }
 
     // MARK: - Actions

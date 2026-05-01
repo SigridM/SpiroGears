@@ -98,10 +98,10 @@ final class SubscriptionStore {
 
     @MainActor
     func refreshEntitlement() async {
-#if DEBUG
-        entitlement = .subscribed
-        return
-#endif
+//#if DEBUG
+//        entitlement = .subscribed
+//        return
+//#endif
         
         var hasActive = false
         for await result in Transaction.currentEntitlements {
