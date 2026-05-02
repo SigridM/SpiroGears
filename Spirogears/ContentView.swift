@@ -22,7 +22,7 @@ struct ContentView: View {
     @AppStorage("showGears")              private var showGears             = true
     @AppStorage("animate")                private var animate               = false
     @AppStorage("animationSpeed")         private var animationSpeed        = AnimationSpeed.medium
-    @AppStorage("manualDrawing")          private var manualDrawing         = false
+    @AppStorage("manualDrawing")          private var manualDrawing         = true
     @AppStorage("haptics")                private var haptics               = true
     @AppStorage("defaultBackgroundColor") private var defaultBackgroundColorHex: String = "#FFFFFF"
 
@@ -51,6 +51,7 @@ struct ContentView: View {
 
     @Environment(SubscriptionStore.self) private var store
     @AppStorage("drawingsCreated") private var drawingsCreated = 0
+    @AppStorage("hasLaunchedBefore") private var hasLaunchedBefore = false
 
     @State private var shareImage: UIImage?
     @State private var shareURL: URL?
@@ -260,6 +261,16 @@ struct ContentView: View {
                 SpiroDrawing.allThumbnails
             }.value
             savedThumbnails = thumbs
+            if !hasLaunchedBefore {
+                hasLaunchedBefore = false
+                manualDrawing = true
+                showGears = true
+                let tutorial = SpiroDrawing.tutorial()
+                loadDrawing(tutorial)
+                let tutorialLayer = SpiroDialogData.lastData.makeLayer()
+                canvas.beginManualDrawing(layer: tutorialLayer)
+                isModified = true
+            }
         }
         .onChange(of: haptics) { _, value in canvas.hapticsEnabled = value }
         .onChange(of: canvas.isAnimating) { _, animating in if !animating { updateShareImage() } }
@@ -338,6 +349,7 @@ struct ContentView: View {
         case .addLayer:
             if store.entitlement == .free,
                let drawing = currentDrawing,
+               !drawing.isTutorialDrawing,
                drawing.layers.count >= SubscriptionStore.freeTierLayerLimit {
                 showPaywall(for: "More than \(SubscriptionStore.freeTierLayerLimit) layers per drawing")
                 return

@@ -4,11 +4,92 @@
 
 # Pending Tasks
 
-## Pending Tasks – High Priority
+## Pending Tasks – High Priority - Bugs
+
+### ⬜ Failure to Erase
+**Priority:** High
+**Status:** Pending
+**Description:** When the wheel goes backward in manual mode, there are times when it does not completely erase the line drawn when going forward. Further investigation shows that this is once again a problem of the finger/cursor wandering outside of the ring. Doing so makes the app forget what it has drawn somehow.
+    It can also happen if the finger is lifted and re-placed on the wheel, so maybe it's any resumption of drawing that makes it "forget."
+
+---
+
+### ⬜ Undo Layer not Enabled, Manual Mode
+**Priority:** High
+**Status:** Pending
+**Description:** As soon as the user starts drawing a layer (or a new drawing) in Manual Drawing Mode, the Undo button should become enabled. This happens in automatic mode, but not in manual mode. The only way to undo that first layer is to click the "Add Layer" button, cancel, and then "Undo" is enabled.
+
+---
+
+
+### ⬜ On Redo Layer, take Settings into Account
+**Priority:** Medium
+**Status:** Pending
+**Description:** When the user clicks "Redo" (layer) but has Automatic mode and animation on, animate the redrawing of that layer according to those settings. If manual drawing mode, you can treat as automatic/animation off for now as it currently does. I'll have to decide whether to revisit this and let them redraw the layer manually.
+
+---
+
+
 
 ## Pending Tasks - Medium Priority - Bugs
 
+### ⬜ Never Allow Gear to do Nothing
+**Priority:** Medium
+**Status:** Pending
+**Description:** When a layer is complete, particularly if the user clicks "New Layer" and then cancels, the gears appear "stuck." You can no longer drag them to draw or erase the previous line. This could be frustrating for new users especially, who don't know they can Undo/Redo the layer or that they have to add a new layer. Therefore, if a user cancels a new layer, treat the previous layer as unfinished and allow the gear (in manual mode) to still be dragged forward to dray (if not complete) or backwards to erase. 
+    Allow this to be the case for *every* layer in the stack. I.e., if they undo, treat the layer that is now on the top as editable with forward/backward motion of the cursor.
+
+---
+
+### ⬜ Make Numbers Easier to Select
+**Priority:** Medium
+**Status:** Pending
+**Description:** In the Layer settings, especially on the physical phone (as opposed to the Simulator), it is difficult to double-click on the number to change it. Is it possible to allow a double-click anywhere on the *row* to select the value? 
+    It may also help to have a wider margin at the edges (especially at the right edge where the numbers are). On a phone with a case, selecting the number is difficult that close to the edge. (This is also a problem for the settings icon; it is too close to the right edge.)
+    Finally, how about adding up and down arrows to increment/decrement the value by one?
+
+
+---
+
+### ⬜ Fix Loops Calculation; Include % Complete
+**Priority:** Medium
+**Status:** Pending
+**Description:** "Full cycle" isn't being calculated correctly. E.g., with inner ring notches of 105 and wheel notches of 96, it says "full cycle: 18". But I counted 35 times of dragging my finger around the ring before I returned to the beginning. A full cycle of loops should be the number of times the user's finger crosses 12 o'clock before reaching the end. (With the setting of inner ring notches 105, wheel notches 52, it says full cycle: 53, but I counted 52 times.)
+    Also, once the user chooses a number of loops, tell them the percent (with two decimals of precision) of the whole that would be.
+
+---
+
+### ⬜ Show Mode Settings in Layer Sheet (with button)
+**Priority:** Medium
+**Status:** Pending
+**Description:** Unobtrusively at the top of the "Add Layer" sheet, show what the current settings are (Manual vs. Automatic, Animation on/off, and animation speed -- haptics and default background are not necessary) along with a button to change those (i.e., get to the settings sheet). This would allow the user to set those before drawing each layer.
+
+---
+
+### ⬜ Show Mode Settings in Drawing (with button)
+**Priority:** Medium
+**Status:** Pending
+**Description:** Unobtrusively at the top of the Drawing, show what the current settings are (Manual vs. Automatic, Animation on/off, and animation speed -- haptics and default background are not necessary) along with a button to change those (i.e., get to the settings sheet). Maybe this requires some reconfiguring of the layout so the settings button is part of the display of the current settings.
+
+---
+
 ## Pending Tasks – Medium Priority - Features
+
+### ⬜ Pen Thickness Option
+**Priority:** Medium
+**Status:** Pending
+**Description:** When creating a layer, allow the user to modify the line weight.
+
+---
+
+
+### ⬜ Landscape Mode Placement
+**Priority:** Medium
+**Status:** Pending
+**Description:** If the user rotates the screen to "landscape" orientation, stack the palette in a panel on the right hand side of the screen so there is more room for the drawing.
+
+---
+
 
 ## Pending Tasks – Low Priority
 

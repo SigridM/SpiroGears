@@ -33,6 +33,10 @@ class SpiroDrawing {
     /// Defaults to white; the user can change it per-drawing via Show Layers.
     var backgroundColor: UIColor = .white
 
+    /// True for the first-launch tutorial drawing. Free-tier layer limits are
+    /// waived so new users can draw on top of the preset without hitting a paywall.
+    var isTutorialDrawing: Bool = false
+
     private static var _savedDrawings: [String: SpiroDrawing] = [:]
 
     func addLayer(_ layer: SpiroLayer) {
@@ -188,6 +192,22 @@ class SpiroDrawing {
                       .exampleB11(), .exampleB12(), .exampleB13()] {
             d.addLayer(layer)
         }
+        return d
+    }
+
+    /// First-launch tutorial drawing: the Star preset with one ready-to-draw layer
+    /// pre-configured to trace the points of the star (ring 105, wheel 21, hole 1, magenta).
+    /// The isTutorialDrawing flag waives free-tier layer limits for this drawing.
+    static func tutorial() -> SpiroDrawing {
+        let d = example4()
+        d.isTutorialDrawing = true
+        // Pre-configure the layer dialog so the user's first tap on + is ready to draw.
+        var data = SpiroDialogData()
+        data.innerRingNotches = 105
+        data.wheelNotches = 21
+        data.holeNumber = 1
+        data.color = Color(uiColor: UIColor(hex: "FE00FB") ?? .magenta)
+        SpiroDialogData.lastData = data
         return d
     }
 }
