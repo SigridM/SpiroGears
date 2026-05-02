@@ -7,13 +7,6 @@
 ## Pending Tasks – High Priority - Bugs
 
 
-### ⬜ On Redo Layer, take Settings into Account
-**Priority:** High
-**Status:** Pending
-**Description:** When the user clicks "Redo" (layer) but has Automatic mode and animation on, animate the redrawing of that layer according to those settings. If manual drawing mode, you can treat as automatic/animation off for now as it currently does. I'll have to decide whether to revisit this and let them redraw the layer manually.
-
----
-
 ## Pending Tasks – High Priority
 
 ### ⬜ Ask for Review
@@ -600,6 +593,13 @@ git commit -m "Add shared Xcode scheme"
 **Status:** Pending
 **Description:** When a layer is complete, particularly if the user clicks "New Layer" and then cancels, the gears appear "stuck." You can no longer drag them to draw or erase the previous line. This could be frustrating for new users especially, who don't know they can Undo/Redo the layer or that they have to add a new layer. Therefore, if a user cancels a new layer, treat the previous layer as unfinished and allow the gear (in manual mode) to still be dragged forward to dray (if not complete) or backwards to erase. 
     Allow this to be the case for *every* layer in the stack. I.e., if they undo, treat the layer that is now on the top as editable with forward/backward motion of the cursor.
+
+---
+
+### ✅ On Redo Layer, Take Settings into Account
+**Priority:** High
+**Status:** Pending
+**Description:** When the user clicks "Redo" (layer) but has Automatic mode and animation on, animate the redrawing of that layer according to those settings. If manual drawing mode, you can treat as automatic/animation off for now as it currently does. I'll have to decide whether to revisit this and let them redraw the layer manually.
 
 ---
 

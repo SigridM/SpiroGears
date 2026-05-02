@@ -616,6 +616,8 @@ struct ContentView: View {
                 resetManualState()
                 manualIsEditingExisting = true
                 canvas.beginEditingLayer(layer, in: drawing)
+            } else if animate {
+                canvas.animateLayer(layer, pointsPerFrame: animationSpeed.pointsPerFrame)
             } else {
                 canvas.appendLayer(layer)
             }
