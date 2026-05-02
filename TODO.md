@@ -6,13 +6,7 @@
 
 ## Pending Tasks – High Priority - Bugs
 
-### ⬜ Failure to Erase
-**Priority:** High
-**Status:** Pending
-**Description:** When the wheel goes backward in manual mode, there are times when it does not completely erase the line drawn when going forward. Further investigation shows that this is once again a problem of the finger/cursor wandering outside of the ring. Doing so makes the app forget what it has drawn somehow.
-    It can also happen if the finger is lifted and re-placed on the wheel, so maybe it's any resumption of drawing that makes it "forget."
 
----
 
 ### ⬜ Undo Layer not Enabled, Manual Mode
 **Priority:** High
@@ -23,12 +17,20 @@
 
 
 ### ⬜ On Redo Layer, take Settings into Account
-**Priority:** Medium
+**Priority:** High
 **Status:** Pending
 **Description:** When the user clicks "Redo" (layer) but has Automatic mode and animation on, animate the redrawing of that layer according to those settings. If manual drawing mode, you can treat as automatic/animation off for now as it currently does. I'll have to decide whether to revisit this and let them redraw the layer manually.
 
 ---
 
+## Pending Tasks – High Priority
+
+### ⬜ Ask for Review
+**Priority:** High
+**Status:** Pending
+**Description:** Consider at what point to ask the user to review the app in the AppStore.
+
+---
 
 
 ## Pending Tasks - Medium Priority - Bugs
@@ -163,6 +165,13 @@ Calling this "Ghost Mode" because it draws thorugh the ring as if it is a ghost.
 
 ---
 
+### ⬜ Multiple Pens
+**Priority:** Low
+**Status:** Pending
+**Description:** Allow the user to choose multiple pen holes for a single layer.
+
+---
+
 ### ⬜ Draw-Your-Own Shape
 **Priority:** Low
 **Status:** Pending
@@ -181,6 +190,7 @@ Calling this "Ghost Mode" because it draws thorugh the ring as if it is a ghost.
 **Priority:** Low
 **Status:** Pending
 **Description:** Instead of a simple straight line, let the user choose a shape that gets "stamped" at intervals on the path around the wheel. E.g., a circle, triangle, diamond, paisley, etc. These can be given a starting rotation at the top, and then the shape (if not a circle, obviously) would rotate with the angle of the wheel when the stamp is applied. E.g., if a triangle that is originally pointing up at the top, as it moves 5 degrees around the circle, the triangle rotates by 5 degrees, allowing it to still point at the point tangential to the radius at that point.
+
 ---
 
 ### ⬜ Intermittent failure to stop (Manual Mode)
@@ -586,3 +596,10 @@ git commit -m "Add shared Xcode scheme"
 
 ---
  
+### ✅ Failure to Erase
+**Priority:** High
+**Status:** Pending
+**Description:** When the wheel goes backward in manual mode, there are times when it does not completely erase the line drawn when going forward. Further investigation shows that this is once again a problem of the finger/cursor wandering outside of the ring. Doing so makes the app forget what it has drawn somehow.
+    It can also happen if the finger is lifted and re-placed on the wheel, so maybe it's any resumption of drawing that makes it "forget."
+
+---
