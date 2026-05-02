@@ -9,6 +9,7 @@ struct DrawingPaletteView: View {
     let thumbnails: [String: UIImage]
     let hasUndo: Bool
     let hasUndone: Bool
+    let hasInProgressLayer: Bool   // true while a new manual layer is being drawn (not yet committed)
     let onAction: (DrawingMenuView.Action) -> Void
     let onShowLayers: () -> Void
 
@@ -26,9 +27,9 @@ struct DrawingPaletteView: View {
             PaletteButton(imageName: "RedoLayerIcon",   label: "Redo")   { onAction(.redoLayer) }
                 .disabled(!hasUndone)
             PaletteButton(imageName: "EditLayersIcon",  label: "Layers") { onShowLayers() }
-                .disabled(!hasLayers)
+                .disabled(!hasLayers && !hasInProgressLayer)
             PaletteButton(systemName: "square.and.arrow.down", label: "Save")    { onAction(.save) }
-                .disabled(!hasLayers)
+                .disabled(!hasLayers && !hasInProgressLayer)
             PaletteButton(systemName: "trash",                 label: "Clear")   { onAction(.clear) }
             PaletteButton(systemName: "photo.stack",           label: "Library") { showingLibrary = true }
         }

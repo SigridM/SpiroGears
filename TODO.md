@@ -7,15 +7,6 @@
 ## Pending Tasks – High Priority - Bugs
 
 
-
-### ⬜ Undo Layer not Enabled, Manual Mode
-**Priority:** High
-**Status:** Pending
-**Description:** As soon as the user starts drawing a layer (or a new drawing) in Manual Drawing Mode, the Undo button should become enabled. This happens in automatic mode, but not in manual mode. The only way to undo that first layer is to click the "Add Layer" button, cancel, and then "Undo" is enabled.
-
----
-
-
 ### ⬜ On Redo Layer, take Settings into Account
 **Priority:** High
 **Status:** Pending
@@ -34,14 +25,6 @@
 
 
 ## Pending Tasks - Medium Priority - Bugs
-
-### ⬜ Never Allow Gear to do Nothing
-**Priority:** Medium
-**Status:** Pending
-**Description:** When a layer is complete, particularly if the user clicks "New Layer" and then cancels, the gears appear "stuck." You can no longer drag them to draw or erase the previous line. This could be frustrating for new users especially, who don't know they can Undo/Redo the layer or that they have to add a new layer. Therefore, if a user cancels a new layer, treat the previous layer as unfinished and allow the gear (in manual mode) to still be dragged forward to dray (if not complete) or backwards to erase. 
-    Allow this to be the case for *every* layer in the stack. I.e., if they undo, treat the layer that is now on the top as editable with forward/backward motion of the cursor.
-
----
 
 ### ⬜ Make Numbers Easier to Select
 **Priority:** Medium
@@ -603,3 +586,20 @@ git commit -m "Add shared Xcode scheme"
     It can also happen if the finger is lifted and re-placed on the wheel, so maybe it's any resumption of drawing that makes it "forget."
 
 ---
+
+
+### ✅ Undo Layer, Edit Layers, Save not Enabled, Manual Mode
+**Priority:** High
+**Status:** Pending
+**Description:** As soon as the user starts drawing a layer (or a new drawing) in Manual Drawing Mode, the Undo button should become enabled, as should the Save button. This happens in automatic mode, but not in manual mode. The only way to undo that first layer (or Save) is to click the "Add Layer" button, cancel, and then the buttons are enabled.
+
+---
+
+### ✅ "Stuck" Gear: Never Allow Gear to do Nothing
+**Priority:** Medium
+**Status:** Pending
+**Description:** When a layer is complete, particularly if the user clicks "New Layer" and then cancels, the gears appear "stuck." You can no longer drag them to draw or erase the previous line. This could be frustrating for new users especially, who don't know they can Undo/Redo the layer or that they have to add a new layer. Therefore, if a user cancels a new layer, treat the previous layer as unfinished and allow the gear (in manual mode) to still be dragged forward to dray (if not complete) or backwards to erase. 
+    Allow this to be the case for *every* layer in the stack. I.e., if they undo, treat the layer that is now on the top as editable with forward/backward motion of the cursor.
+
+---
+

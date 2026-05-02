@@ -48,6 +48,11 @@ struct ContentView: View {
     @State private var manualDragActive: Bool           = false
     // True while the cursor is outside the ring during a manual drag.
     @State private var manualCursorOutside: Bool        = false
+    // True when manual drawing is re-editing a layer already in the drawing
+    // (via beginEditingLayer). Prevents finalizeManualDrawing from adding a duplicate.
+    @State private var manualIsEditingExisting: Bool    = false
+    // Briefly true when the user drags in automatic mode (gear looks interactive but isn't).
+    @State private var showingManualModeHint: Bool      = false
 
     @Environment(SubscriptionStore.self) private var store
     @AppStorage("drawingsCreated") private var drawingsCreated = 0
@@ -96,6 +101,24 @@ struct ContentView: View {
                     .transition(.opacity)
             }
 
+            // Automatic-mode drag hint — fires when the user tries to drag the
+            // gear while manual drawing is off, so the gear doesn't silently ignore them.
+            if !manualDrawing && !canvas.isAnimating {
+                Color.clear
+                    .contentShape(Rectangle())
+                    .ignoresSafeArea()
+                    .gesture(
+                        DragGesture(minimumDistance: 3)
+                            .onChanged { _ in
+                                guard !showingManualModeHint else { return }
+                                withAnimation(.easeIn(duration: 0.15)) { showingManualModeHint = true }
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+                                    withAnimation(.easeOut(duration: 0.3)) { showingManualModeHint = false }
+                                }
+                            }
+                    )
+            }
+
             // Manual drawing drag capture — below the controls so the controls
             // remain tappable. On a real device a recognised DragGesture keeps the
             // touch even when the finger moves over the button area.
@@ -141,6 +164,17 @@ struct ContentView: View {
                                 canvasLastScale = max(0.25, canvasLastScale * value)
                             }
                     )
+            }
+
+            // Manual-mode-off hint toast
+            if showingManualModeHint {
+                Text("Manual Mode is off — enable it in Settings")
+                    .font(.subheadline)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(.regularMaterial, in: Capsule())
+                    .transition(.opacity)
+                    .allowsHitTesting(false)
             }
 
             // Top controls bar
@@ -191,10 +225,12 @@ struct ContentView: View {
                     currentDrawing: currentDrawing,
                     savedDrawingNames: savedDrawingNames,
                     thumbnails: savedThumbnails,
-                    hasUndo: !undoOps.isEmpty,
+                    hasUndo: !undoOps.isEmpty || (canvas.isManualDrawing && !manualIsEditingExisting),
                     hasUndone: !redoOps.isEmpty,
+                    hasInProgressLayer: canvas.isManualDrawing && !manualIsEditingExisting,
                     onAction: { action in handleMenuAction(action) },
                     onShowLayers: {
+                        if canvas.isManualDrawing { finalizeManualDrawing() }
                         if let d = currentDrawing {
                             layersSheetContext = LayersSheetContext(drawing: d)
                         }
@@ -210,13 +246,25 @@ struct ContentView: View {
         .sheet(isPresented: $showingConfig) {
             SpiroConfigView(data: SpiroDialogData.lastData) { data in
                 showingConfig = false
-                guard let data else { return }
+                guard let data else {
+                    // Config cancelled — re-open the last committed layer so the
+                    // gear doesn't go dead. Only in manual mode and only if there
+                    // is already a layer to return to.
+                    if manualDrawing, let drawing = currentDrawing, let layer = drawing.layers.last {
+                        showGears = true
+                        resetManualState()
+                        manualIsEditingExisting = true
+                        canvas.beginEditingLayer(layer, in: drawing)
+                    }
+                    return
+                }
                 if currentDrawing == nil { currentDrawing = SpiroDrawing() }
                 let layer = data.makeLayer()
                 redoOps.removeAll()
                 if manualDrawing {
                     // Gears must be visible while drawing manually.
                     showGears = true
+                    manualIsEditingExisting = false
                     // Don't commit to the drawing yet — wait for the drag to finish.
                     canvas.beginManualDrawing(layer: layer)
                     isModified = true
@@ -275,6 +323,23 @@ struct ContentView: View {
         .onChange(of: haptics) { _, value in canvas.hapticsEnabled = value }
         .onChange(of: canvas.isAnimating) { _, animating in if !animating { updateShareImage() } }
         .onChange(of: canvas.isManualDrawing) { _, drawing in if !drawing { updateShareImage() } }
+        .onChange(of: manualDrawing) { _, isManual in
+            if isManual {
+                // Switched to Manual mode — re-open the top layer for editing so
+                // the gear is immediately interactive rather than appearing stuck.
+                if !canvas.isManualDrawing,
+                   let drawing = currentDrawing,
+                   let layer = drawing.layers.last {
+                    showGears = true
+                    resetManualState()
+                    manualIsEditingExisting = true
+                    canvas.beginEditingLayer(layer, in: drawing)
+                }
+            } else {
+                // Switched to Automatic mode — commit any in-progress manual drawing.
+                if canvas.isManualDrawing { finalizeManualDrawing() }
+            }
+        }
         .alert("Save Drawing", isPresented: $showingSaveAlert) {
             TextField("Name", text: $saveNameInput)
             Button("Save") { confirmSave() }
@@ -499,6 +564,7 @@ struct ContentView: View {
         manualJumpStep           = 0
         manualDragActive         = false
         manualCursorOutside      = false
+        manualIsEditingExisting  = false
         currentDrawing = nil
         currentDrawingName = ""
         undoOps.removeAll()
@@ -513,17 +579,28 @@ struct ContentView: View {
     private func undoLastLayer() {
         guard let drawing = currentDrawing,
               let op = undoOps.popLast() else { return }
+        let reopenTop: Bool
         switch op {
         case .added(let layer):
             drawing.removeLastLayer()
             redoOps.append(.added(layer))
+            // After undoing an add, the new top layer becomes editable again.
+            reopenTop = true
         case .deleted(let layer, let at):
             drawing.insertLayer(layer, at: at)
             redoOps.append(.deleted(layer, at: at))
+            reopenTop = false
         }
         isModified = true
         layerVersion += 1
-        canvas.redrawAll(drawing: drawing)
+        if reopenTop && manualDrawing, let topLayer = drawing.layers.last {
+            showGears = true
+            resetManualState()
+            manualIsEditingExisting = true
+            canvas.beginEditingLayer(topLayer, in: drawing)
+        } else {
+            canvas.redrawAll(drawing: drawing)
+        }
         updateShareImage()
     }
 
@@ -534,7 +611,14 @@ struct ContentView: View {
         case .added(let layer):
             drawing.addLayer(layer)
             undoOps.append(.added(layer))
-            canvas.appendLayer(layer)
+            if manualDrawing {
+                showGears = true
+                resetManualState()
+                manualIsEditingExisting = true
+                canvas.beginEditingLayer(layer, in: drawing)
+            } else {
+                canvas.appendLayer(layer)
+            }
         case .deleted(let layer, let at):
             drawing.removeLayer(at: at)
             undoOps.append(.deleted(layer, at: at))
@@ -600,6 +684,17 @@ struct ContentView: View {
     }
 
     // MARK: - Manual Drawing
+
+    // Resets ContentView-side manual drawing state so the next drag starts fresh.
+    // Call this before beginManualDrawing or beginEditingLayer.
+    private func resetManualState() {
+        manualPrevTranslation    = .zero
+        manualAccumulatedNotches = 0
+        manualDirection          = 0
+        manualJumpStep           = 0
+        manualDragActive         = false
+        manualCursorOutside      = false
+    }
 
     private func handleManualDrag(_ value: DragGesture.Value) {
         guard let layer = canvas.manualLayer else { return }
@@ -775,21 +870,34 @@ struct ContentView: View {
 
     // Called when the Drawing button is tapped mid-draw. Commits whatever has been drawn so far.
     private func finalizeManualDrawing() {
+        let editingExisting = manualIsEditingExisting
+        // Capture before endManualDrawing() clears it.
+        let layerBeingEdited: SpiroLayer? = editingExisting ? canvas.manualLayer : nil
+
         if let layer = canvas.endManualDrawing() {
-            currentDrawing?.addLayer(layer)
-            undoOps.append(.added(layer))
+            if !editingExisting {
+                // New layer — add to the drawing and record in the undo stack.
+                currentDrawing?.addLayer(layer)
+                undoOps.append(.added(layer))
+            }
+            // drawnTo was updated in endManualDrawing; just refresh the layers view.
             layerVersion += 1
-            // isModified was already set true when the config was confirmed.
-        } else {
-            // No strokes were drawn — just cancel silently.
+            // isModified was already set true when the config was confirmed or editing began.
+        } else if editingExisting,
+                  let layer = layerBeingEdited,
+                  let drawing = currentDrawing,
+                  let idx = drawing.layers.firstIndex(where: { $0 === layer }) {
+            // Existing layer was entirely erased — remove it from the drawing.
+            // renderedImage was already rebuilt without it in beginEditingLayer.
+            drawing.removeLayer(at: idx)
+            undoOps.append(.deleted(layer, at: idx))
+            layerVersion += 1
+        } else if !editingExisting {
+            // New layer, no strokes drawn — cancel silently.
             canvas.cancelManualDrawing()
         }
-        manualPrevTranslation    = .zero
-        manualAccumulatedNotches = 0
-        manualDirection          = 0
-        manualJumpStep           = 0
-        manualDragActive         = false
-        manualCursorOutside      = false
+        manualIsEditingExisting = false
+        resetManualState()
     }
 }
 

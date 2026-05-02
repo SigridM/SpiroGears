@@ -263,6 +263,63 @@ class SpiroCanvas: ObservableObject {
         if hapticsEnabled { hapticEngine.prepare() }
     }
 
+    // Re-opens a committed layer for continued manual editing.
+    // Rebuilds renderedImage from all layers in `drawing` that precede `layer`,
+    // then pre-populates the manual overlay with `layer`'s drawn path so the
+    // user can drag forward to continue or backward to erase.
+    func beginEditingLayer(_ layer: SpiroLayer, in drawing: SpiroDrawing) {
+        cancelAnimation()
+        guard canvasSize.width > 0 else { return }
+
+        let rect    = CGRect(origin: .zero, size: canvasSize)
+        let offset  = renderOffset
+        let size    = renderSize
+        let bgColor = drawingBackgroundColor
+
+        // Rebuild renderedImage without `layer` (all layers before it in the stack).
+        let precedingLayers = drawing.layers.prefix(while: { $0 !== layer })
+        if precedingLayers.isEmpty {
+            renderedImage = nil
+        } else {
+            renderedImage = UIGraphicsImageRenderer(size: size).image { ctx in
+                ctx.cgContext.setFillColor(bgColor.cgColor)
+                ctx.cgContext.fill(CGRect(origin: .zero, size: size))
+                ctx.cgContext.saveGState()
+                ctx.cgContext.translateBy(x: offset.x, y: offset.y)
+                for l in precedingLayers where !l.isHidden {
+                    let p = l.path(in: rect)
+                    ctx.cgContext.setStrokeColor(l.penColor.cgColor)
+                    ctx.cgContext.setLineWidth(1.0)
+                    ctx.cgContext.addPath(p.cgPath)
+                    ctx.cgContext.strokePath()
+                }
+                ctx.cgContext.restoreGState()
+            }
+        }
+
+        // Pre-populate the overlay with the layer's drawn path.
+        let drawnTo = layer.drawnTo ?? layer.stepCount
+        if drawnTo != layer.drawnFrom {
+            manualOverlayImage = UIGraphicsImageRenderer(size: size).image { ctx in
+                ctx.cgContext.saveGState()
+                ctx.cgContext.translateBy(x: offset.x, y: offset.y)
+                ctx.cgContext.setStrokeColor(layer.penColor.cgColor)
+                ctx.cgContext.setLineWidth(1.0)
+                ctx.cgContext.addPath(layer.path(in: rect).cgPath)
+                ctx.cgContext.strokePath()
+                ctx.cgContext.restoreGState()
+            }
+        } else {
+            manualOverlayImage = nil
+        }
+
+        manualLayer      = layer
+        manualLastStep   = drawnTo
+        manualWheelAngle = layer.stationaryGuide.angleIncrement * Double(drawnTo)
+        isManualDrawing  = true
+        if hapticsEnabled { hapticEngine.prepare() }
+    }
+
     // Stroke from the last committed step up to `step`, updating the overlay image.
     // step may be positive (CW) or negative (CCW); the direction is determined by
     // whichever way the caller moves step away from zero.
