@@ -19,21 +19,40 @@
 
 ## Pending Tasks - Medium Priority - Bugs
 
-### ⬜ Make Numbers Easier to Select
+### ⬜ Starting-at Layer Spec
 **Priority:** Medium
 **Status:** Pending
-**Description:** In the Layer settings, especially on the physical phone (as opposed to the Simulator), it is difficult to double-click on the number to change it. Is it possible to allow a double-click anywhere on the *row* to select the value? 
-    It may also help to have a wider margin at the edges (especially at the right edge where the numbers are). On a phone with a case, selecting the number is difficult that close to the edge. (This is also a problem for the settings icon; it is too close to the right edge.)
-    Finally, how about adding up and down arrows to increment/decrement the value by one?
-
+**Description:** In Add Layer sheet, rename "Starting Notch" to "Starting at...". 
+    Give it two options: 
+    1) End of previous layer (i.e., the chosen pen hole may not be near the edge of the ring; it might be towad the center)
+    2) Inner ring notch (where they can specify an inner ring notch number as we do now, with the chosen pen hole aligned with the notch).
+       For the notch number, give it a max of Inner Ring Notches - 1 and a min of (Inner Ring Notches - 1)negated. E.g., for the subtext, write "-104 to 104" if the inner ring has 105 notches. And limit the +/- buttons to those numbers.
 
 ---
+
+### ⬜ All Layers Hidden Undo Bug
+**Priority:** Medium
+**Status:** Pending
+**Description:** If you hide all layers, then add a new layer, then undo that new layer and redo it, it shows the last hidden layer in the drawing even though it is still shown as hidden when you Edit Layers. So either don't show that layer on Redo or mark it in the Layers as showing. I think the latter would be preferable. Assume that if they are redoing a layer, they want to see it, so it is no longer hidden.
+
+---
+
 
 ### ⬜ Fix Loops Calculation; Include % Complete
 **Priority:** Medium
 **Status:** Pending
-**Description:** "Full cycle" isn't being calculated correctly. E.g., with inner ring notches of 105 and wheel notches of 96, it says "full cycle: 18". But I counted 35 times of dragging my finger around the ring before I returned to the beginning. A full cycle of loops should be the number of times the user's finger crosses 12 o'clock before reaching the end. (With the setting of inner ring notches 105, wheel notches 52, it says full cycle: 53, but I counted 52 times.)
-    Also, once the user chooses a number of loops, tell them the percent (with two decimals of precision) of the whole that would be.
+**Description:** "Full cycle" isn't being calculated correctly. E.g., with inner ring notches of 105 and wheel notches of 96, it says "full cycle: 18". But I counted 32 times of dragging my finger around the ring before I returned to the beginning. A full cycle of loops should be the number of times the user's finger crosses 12 o'clock (or the starting notch; 12 o'clock if the starting notch is 0) before reaching the end. (With the setting of inner ring notches 105, wheel notches 52, it says full cycle: 53, but I counted 52 times.)
+    Here is the calculation to use: 
+    If you have a ring with gear teeth on the inside numbering r teeth, and a wheel inside the ring with gear teeth on the wheel's outside numbering w teeth (where w is an integer between 1 and r - 1), and a point of origin (p) on one of the wheel's teeth, and if the wheel starts at 12 o'clock inside the ring, with p pointing straight up, how can you calculate how many times (n) the wheel passes that starting point at 12 o'clock before p again points straight up?
+    
+    g = gcd(r, w)
+    n = w / g
+    
+    n is the "number of loops" I want in the UI for a full cycle.
+    
+    Also, once the user chooses a number of loops, tell them the percent (with 1-2 decimals of precision, but hide any trailing 0's) of the whole that would be. E.g., if there are no loops chosen, show "100% (Full cycle: 34)". If there are 11 chosen when the full cycle is 34, show "32.35% (Full cycle: 34)"
+    Also, during animation, if the number of loops is set to less than full, don't jump the wheel back to the starting position. Leave it where it stopped (like it does in manual drawing mode).
+    It would also be really helpful if setting the number of loops showed what that ending notch would be. Then if the user wants to continue from where they ended, they can set the starting notch to that number.
 
 ---
 
@@ -77,6 +96,15 @@
 **Description:** Add a "redraw" button so an entire drawing (all the layers) can be redrawn. This will allow a user to draw the same drawing again with animation on or at a different speed. This is already there only if the user saves the drawing; it animates when they open a saved drawing (if they have automatic/animation turned on). Allow it even for unsaved drawings. This should be an automatic redraw even if manual drawing mode is selected. [Actually, I'm starting to be unsure about this. Maybe we can just let them save the drawing, change the drawing settings if they want, and ]
 
 ---
+
+### ⬜ Group Layers
+**Priority:** Low
+**Status:** Pending
+**Description:** Allow layers to be grouped, primarily so they can be shown/hidden together or reordered together. Mechanism: In Edit Layers, allow layers to be selected like they are for copying as a template, but add a "group" button that, once clicked, creates a group of the selected layers. Show this as indented layers under a common heading with a disclosure triangle. Bonus: if the layers grouped share one or more common features (e.g., same inner ring, wheel and hole, but different start and color), show the common characteristics in the group description, hiding characteristics that are different.
+    Name the groups like the layers for now: Group 1, Group 2, etc. (Perhaps we'll add a rename layer/group feature later.)
+
+---
+
 
 ### ⬜ Out-of-Bounds Drawing Modes (aka "Ghost Mode")
 **Priority:** Low
@@ -603,3 +631,11 @@ git commit -m "Add shared Xcode scheme"
 
 ---
 
+### ✅ Make Numbers Easier to Select
+**Priority:** Medium
+**Status:** Pending
+**Description:** In the Layer settings, especially on the physical phone (as opposed to the Simulator), it is difficult to double-click on the number to change it. Is it possible to allow a double-click anywhere on the *row* to select the value? 
+    It may also help to have a wider margin at the edges (especially at the right edge where the numbers are). On a phone with a case, selecting the number is difficult that close to the edge. (This is also a problem for the settings icon; it is too close to the right edge.)
+    Finally, how about adding up and down arrows to increment/decrement the value by one?
+
+---
