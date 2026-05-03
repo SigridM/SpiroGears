@@ -734,79 +734,18 @@ struct ContentView: View {
 
         let endStep    = layer.effectiveEndStep
 
-        // Lock in direction from the first significant movement.
-        // This runs even when the cursor is outside the ring so the direction
-        // is captured regardless of where the user starts their drag.
+        // On the first significant movement, initialize the accumulator from the
+        // canvas's current step so editing an existing layer resumes correctly.
+        // CW always draws (step increases), CCW always erases (step decreases).
         if manualDirection == 0 && abs(deltaAngle) > 0.01 {
-            manualDirection = deltaAngle > 0 ? 1 : -1
-
-            // Snap the wheel to the cursor's current angular position.
-            // Cursor angle relative to ring center → convert to a fractional step.
-            let cursorRad = atan2(Double(curr.y - ringCenter.y), Double(curr.x - ringCenter.x))
-            // thetaDeg(step) = angleIncrement*step + originalAngle - 90
-            // Invert: step = (cursorDeg - originalAngle + 90) / angleIncrement
-            let cursorDeg = cursorRad * 180 / .pi
-            let angleInc  = ring.angleIncrement          // degrees per step
-            let startFrac = (cursorDeg - ring.originalAngle + 90) / angleInc
-            let stepCount = layer.stepCount
-            let ringN     = ring.innerNotchCircumference
-
-            let jumpStep: Int
-            let lastStep = canvas.manualLastStep
-            if lastStep != 0 {
-                // Resume mid-draw: advance from the last drawn step to the cursor's
-                // current ring position, drawing the catch-up segment between them.
-                // Uses the same forward-delta formula as ring re-entry so the pen
-                // always advances in the drag direction by the shortest arc, never
-                // jumping backward unexpectedly.
-                let cursorRingPos = Int(((startFrac.truncatingRemainder(dividingBy: Double(ringN)))
-                                         + Double(ringN))
-                                        .truncatingRemainder(dividingBy: Double(ringN)))
-                let lastRingPos   = ((lastStep % ringN) + ringN) % ringN
-                let forwardDelta  = ((cursorRingPos - lastRingPos) * manualDirection + ringN) % ringN
-                jumpStep = lastStep + manualDirection * forwardDelta
-            } else {
-                // First touch: snap wheel to cursor if it is within 180° of the starting
-                // notch in the drawing direction. Beyond 180° the catch-up would draw
-                // nearly a full cycle before the user moves, so stay at 0 instead.
-                //
-                // fwdNotches is the CW distance (in ring-notch units) from the starting
-                // notch to the cursor. The drawing-direction distance is therefore:
-                //   CW:  fwdNotches              (cursor is ahead in CW direction)
-                //   CCW: ringN - fwdNotches       (cursor is ahead in CCW direction)
-                let fwdNotches = ((startFrac.truncatingRemainder(dividingBy: Double(stepCount)))
-                                  + Double(stepCount))
-                                 .truncatingRemainder(dividingBy: Double(stepCount))
-                let fwdInt = Int(fwdNotches)
-                let catchUpDist = manualDirection > 0 ? fwdInt : ringN - fwdInt
-                if catchUpDist <= ringN / 2 {
-                    // For CW:  jumpStep = +fwdNotches (step advances positively)
-                    // For CCW: jumpStep = -(endStep - fwdNotches), which places the wheel
-                    //          at the cursor position and lets the CCW draw cover the
-                    //          configured loop count before finalizing.
-                    if manualDirection > 0 {
-                        jumpStep = fwdInt
-                    } else {
-                        jumpStep = -(endStep - fwdInt)
-                    }
-                } else {
-                    jumpStep = 0  // Too far away in drawing direction — start from notch 0.
-                }
-            }
-            // Clamp so re-touching at/past the completion point doesn't produce a
-            // jumpStep beyond endStep, which would make notchCap negative and require
-            // extra backward drag before erasing begins.
-            let clampedJump          = max(-endStep, min(jumpStep, endStep))
-            manualJumpStep           = clampedJump
-            manualAccumulatedNotches = 0
-            canvas.jumpManualStep(to: clampedJump)
+            manualDirection          = 1
+            manualAccumulatedNotches = Double(canvas.manualLastStep)
         }
         guard manualDirection != 0 else {
             manualPrevTranslation = value.translation
             return
         }
         let curRadius  = hypot(Double(vb.x), Double(vb.y))
-        let prevRadius = hypot(Double(va.x), Double(va.y))
         let ringEdge   = Double(ring.innerRadius) + 30
 
         let isOutside = curRadius > ringEdge
@@ -816,56 +755,18 @@ struct ContentView: View {
 
         if curRadius > ringEdge {
             // Outside the ring: keep the accumulator and wheel in sync with the
-            // cursor but skip drawing updates entirely. This prevents incidental
-            // CCW jitter outside the ring from triggering the backingUp erase.
+            // cursor but skip drawing updates entirely.
             let deltaNotches = deltaAngle * Double(ring.innerNotchCircumference) / (2 * .pi)
-                             * Double(manualDirection)
-            let notchCap = Double(endStep) - Double(manualDirection * manualJumpStep)
-            manualAccumulatedNotches = min(manualAccumulatedNotches + deltaNotches, notchCap)
-            canvas.updateManualWheelOnly(toStep: manualJumpStep + manualDirection * Int(manualAccumulatedNotches))
+            manualAccumulatedNotches = min(max(manualAccumulatedNotches + deltaNotches, 0), Double(endStep))
+            canvas.updateManualWheelOnly(toStep: Int(manualAccumulatedNotches))
             manualPrevTranslation = value.translation
             return
         }
 
-        if prevRadius > ringEdge {
-            // Re-entry: cursor just crossed back inside the ring.
-            // Compute the cursor's current position in ring-notch space
-            // (0 ..< ring.innerNotchCircumference). This is the only information
-            // the cursor's angular position can supply — not which revolution.
-            let reRad  = atan2(Double(vb.y), Double(vb.x))
-            let reDeg  = reRad * 180 / .pi
-            let reFrac = (reDeg - ring.originalAngle + 90) / ring.angleIncrement
-            let ringN  = ring.innerNotchCircumference
-            let reFwd  = Int(((reFrac.truncatingRemainder(dividingBy: Double(ringN)))
-                              + Double(ringN))
-                             .truncatingRemainder(dividingBy: Double(ringN)))
-            // Always advance in the drawing direction from the last-drawn ring
-            // position to the cursor's ring position. Never retreat — if the cursor
-            // comes back slightly behind the exit point, forwardDelta is nearly
-            // ringN (one full ring sweep forward) rather than a tiny retreat.
-            let lastRingPos  = ((canvas.manualLastStep % ringN) + ringN) % ringN
-            let forwardDelta = ((reFwd - lastRingPos) * manualDirection + ringN) % ringN
-            let reStep       = canvas.manualLastStep + manualDirection * forwardDelta
-            // Snap the accumulator so inside-ring drawing continues without jitter.
-            // Cap at notchCap so re-entry can't advance past the end of the drawing.
-            let notchCap = Double(endStep) - Double(manualDirection * manualJumpStep)
-            manualAccumulatedNotches = min(Double(manualDirection * (reStep - manualJumpStep)),
-                                           notchCap)
-            canvas.resumeManualDrawing(atStep: reStep)
-            manualPrevTranslation = value.translation
-            return
-        }
-
-        // Normal inside-ring drawing.
+        // Normal inside-ring drawing. CW (deltaAngle > 0) draws forward; CCW erases.
         let deltaNotches = deltaAngle * Double(ring.innerNotchCircumference) / (2 * .pi)
-                         * Double(manualDirection)
-        // Cap so the step doesn't advance past endStep. The correct ceiling for the
-        // accumulator is (endStep - direction*jumpStep), because
-        //   step = jumpStep + direction*accumulated = endStep
-        // when accumulated = endStep - direction*jumpStep. Backward motion is unrestricted.
-        let notchCap = Double(endStep) - Double(manualDirection * manualJumpStep)
-        manualAccumulatedNotches = min(manualAccumulatedNotches + deltaNotches, notchCap)
-        let step = manualJumpStep + manualDirection * Int(manualAccumulatedNotches)
+        manualAccumulatedNotches = min(max(manualAccumulatedNotches + deltaNotches, 0), Double(endStep))
+        let step = Int(manualAccumulatedNotches)
         canvas.updateManualDrawing(toStep: step)
         manualPrevTranslation = value.translation
     }

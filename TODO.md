@@ -602,7 +602,7 @@ git commit -m "Add shared Xcode scheme"
  
 ### ✅ Failure to Erase
 **Priority:** High
-**Status:** Pending
+**Status:** Completed (2026-05-02)
 **Description:** When the wheel goes backward in manual mode, there are times when it does not completely erase the line drawn when going forward. Further investigation shows that this is once again a problem of the finger/cursor wandering outside of the ring. Doing so makes the app forget what it has drawn somehow.
     It can also happen if the finger is lifted and re-placed on the wheel, so maybe it's any resumption of drawing that makes it "forget."
 
@@ -611,14 +611,14 @@ git commit -m "Add shared Xcode scheme"
 
 ### ✅ Undo Layer, Edit Layers, Save not Enabled, Manual Mode
 **Priority:** High
-**Status:** Pending
+**Status:** Completed (2026-05-02)
 **Description:** As soon as the user starts drawing a layer (or a new drawing) in Manual Drawing Mode, the Undo button should become enabled, as should the Save button. This happens in automatic mode, but not in manual mode. The only way to undo that first layer (or Save) is to click the "Add Layer" button, cancel, and then the buttons are enabled.
 
 ---
 
 ### ✅ "Stuck" Gear: Never Allow Gear to do Nothing
 **Priority:** Medium
-**Status:** Pending
+**Status:** Completed (2026-05-02)
 **Description:** When a layer is complete, particularly if the user clicks "New Layer" and then cancels, the gears appear "stuck." You can no longer drag them to draw or erase the previous line. This could be frustrating for new users especially, who don't know they can Undo/Redo the layer or that they have to add a new layer. Therefore, if a user cancels a new layer, treat the previous layer as unfinished and allow the gear (in manual mode) to still be dragged forward to dray (if not complete) or backwards to erase. 
     Allow this to be the case for *every* layer in the stack. I.e., if they undo, treat the layer that is now on the top as editable with forward/backward motion of the cursor.
 
@@ -626,16 +626,24 @@ git commit -m "Add shared Xcode scheme"
 
 ### ✅ On Redo Layer, Take Settings into Account
 **Priority:** High
-**Status:** Pending
+**Status:** Completed (2026-05-02)
 **Description:** When the user clicks "Redo" (layer) but has Automatic mode and animation on, animate the redrawing of that layer according to those settings. If manual drawing mode, you can treat as automatic/animation off for now as it currently does. I'll have to decide whether to revisit this and let them redraw the layer manually.
 
 ---
 
 ### ✅ Make Numbers Easier to Select
 **Priority:** Medium
-**Status:** Pending
+**Status:** Completed (2026-05-02)
 **Description:** In the Layer settings, especially on the physical phone (as opposed to the Simulator), it is difficult to double-click on the number to change it. Is it possible to allow a double-click anywhere on the *row* to select the value? 
     It may also help to have a wider margin at the edges (especially at the right edge where the numbers are). On a phone with a case, selecting the number is difficult that close to the edge. (This is also a problem for the settings icon; it is too close to the right edge.)
     Finally, how about adding up and down arrows to increment/decrement the value by one?
 
 ---
+
+### ✅ Simplify Manual Drawing
+**Priority:** Medium
+**Status:** Completed (2026-05-03)
+**Description:** Instead of allowing manual drawing to "draw" either clockwise or counterclockwise and "erase" in the oppoisite direction of the direction started for draw, make drawing always clockwise and erasing always counterclockwise. This gets rid of a persistent problem of the finger swiping from 9:00 to 3:00 on the wheel drawing the entire layer instantly.
+
+---
+
